@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# log timestamp
+echo "$(date): Running cleararr script" >> /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.log
+
+# import enviroment for python to access vars
+source /boot/config/plugins/user.scripts/scripts/clearerr/.env
+
+# run Python script
+python3 /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.py >> /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.log 2>&1
