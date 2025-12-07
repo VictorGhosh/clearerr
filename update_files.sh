@@ -9,6 +9,7 @@ source ./.env
 # files to move. should only be what is expected on the server
 FILES=(
   "clearerr.py"
+  "plex_api.py"
   "name"
   "script"
   ".env"

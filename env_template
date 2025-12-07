@@ -1,2 +1,5 @@
 # .env
-UNRAID_IP=""
+export DEBUG=1
+export UNRAID_IP=""
+export PLEX_IP=""
+export PLEX_TOKEN=""
