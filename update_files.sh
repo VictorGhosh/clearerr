@@ -10,6 +10,7 @@ source ./.env
 FILES=(
   "clearerr.py"
   "plex_api.py"
+  "tautulli_api.py"
   "name"
   "script"
   ".env"

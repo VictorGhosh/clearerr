@@ -1,5 +1,10 @@
 # .env
 export DEBUG=1
+
 export UNRAID_IP=""
+
 export PLEX_IP=""
 export PLEX_TOKEN=""
+
+export TAUTULLI_IP=""
+export TAUTULLI_KEY=""
