@@ -4,14 +4,14 @@ import xml.etree.ElementTree as ET
 
 DEBUG       = os.environ.get("DEBUG")
 PLEX_IP     = os.environ.get("PLEX_IP")
+PLEX_TOKEN  = os.environ.get("PLEX_TOKEN")
 
 PLEX_URL = f"http://{PLEX_IP}:32400"
 
 
 class Plex_API():
 
-    def __init__(self, plex_token: str):
-        self.plex_token = plex_token
+    def __init__(self):
         self.movies = []
         self.shows  = []
         self.movies_key = None
@@ -31,7 +31,7 @@ class Plex_API():
 
     def _parse_keys(self):
         # Get library sections  
-        resp = self._get_resp(f"{PLEX_URL}/library/sections?X-Plex-Token={self.plex_token}")
+        resp = self._get_resp(f"{PLEX_URL}/library/sections?X-Plex-Token={PLEX_TOKEN}")
         root = ET.fromstring(resp.content)
 
         # find sections
@@ -46,7 +46,7 @@ class Plex_API():
     def _parse_movies(self, movies_key):
 
         if movies_key:
-            resp = self._get_resp(f"{PLEX_URL}/library/sections/{movies_key}/all?X-Plex-Token={self.plex_token}")
+            resp = self._get_resp(f"{PLEX_URL}/library/sections/{movies_key}/all?X-Plex-Token={PLEX_TOKEN}")
             root = ET.fromstring(resp.content)
 
             for movie in root.findall('Video'):
@@ -73,7 +73,7 @@ class Plex_API():
 
     def _parse_shows(self, shows_key):
         if shows_key:
-            resp = self._get_resp(f"{PLEX_URL}/library/sections/{shows_key}/all?X-Plex-Token={self.plex_token}")
+            resp = self._get_resp(f"{PLEX_URL}/library/sections/{shows_key}/all?X-Plex-Token={PLEX_TOKEN}")
             root = ET.fromstring(resp.content)
             for show in root.findall('Directory'):
                 show_title = show.attrib.get('title')
@@ -81,7 +81,7 @@ class Plex_API():
 
                 # get seasons
                 season_objs = []
-                resp_seasons = self._get_resp(f"{PLEX_URL}{show_key}?X-Plex-Token={self.plex_token}")
+                resp_seasons = self._get_resp(f"{PLEX_URL}{show_key}?X-Plex-Token={PLEX_TOKEN}")
                 seasons_root = ET.fromstring(resp_seasons.content)
 
                 for season in seasons_root.findall('Directory'):
@@ -94,7 +94,7 @@ class Plex_API():
                         continue
                     
                     # get episodes for the season to compute last watched
-                    resp_eps = self._get_resp(f"{PLEX_URL}{season_key}?X-Plex-Token={self.plex_token}")
+                    resp_eps = self._get_resp(f"{PLEX_URL}{season_key}?X-Plex-Token={PLEX_TOKEN}")
                     eps_root = ET.fromstring(resp_eps.content)
 
                     last_viewed_list = [
@@ -199,6 +199,6 @@ class Show(_Media):
     def __str__(self):  
         seasons_str = ""
         for i in self.seasons:
-            seasons_str += f"{i}, " 
+            seasons_str += f"{i}," 
 
         return f"{super().__str__()} - seasons: {seasons_str}"
