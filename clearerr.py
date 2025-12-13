@@ -1,6 +1,6 @@
 # from plex_api import *
-from tautulli_api import Tautulli_API
-from jellyfin_api import Jellyfin_API
+from api.tautulli_api import Tautulli_API
+from api.jellyfin_api import Jellyfin_API
 import json
 
 # client = Tautulli_API()
@@ -15,7 +15,7 @@ j = Jellyfin_API()
         # print(item)
 
 for usr in j.get_users():
-    j.get_user_playlist(usr['Id'])
+    print(j.get_user_playlist(usr['Id']))
 
 
 # print(j.get_list_contents('1071671e7bffa0532e930debee501d2e', 'dbdf147aa8384befb22ce1a48f790a0c'))
