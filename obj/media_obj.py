@@ -26,6 +26,15 @@ class _Media():
         return str(short_dict)
 
     def populate_from_tautilli(self, metadata: dict) -> None:
+        '''
+        At the moment tautilli is the chosend starter for media objects but others will be used to validate.
+        This method initalizes the attributes that can be grabbed from that app. In adding to this method
+        we should try to keep with the order of attribute declarations as much as possible.
+        
+        :param metadata: metadata from tautilli api
+        :type metadata: dict
+        '''
+        # validate we got the right metadata file
         if metadata['title'] != self.title:
             raise ValueError(f"Expected title {self.title} got {metadata['title']}")
 

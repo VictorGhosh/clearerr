@@ -58,7 +58,14 @@ class Tautulli_API:
             print(f"Raw data: {data}")
             return None
 
-    def get_library_ids(self) -> dict:          
+    def get_library_ids(self) -> dict:
+        '''
+        From the highest level plex library ids. seems to just be 1 for movies and 2 for tv shows
+        but I think this could change if collections get added in the future. 
+        
+        :return: library names and their ids
+        :rtype: dict
+        '''   
         data = self._get_resp(params={'cmd': 'get_libraries'})
         if data is None:
             return {}
@@ -70,6 +77,15 @@ class Tautulli_API:
         return libraries
 
     def get_library(self, lib_id: str) -> list:
+        '''
+        Get library data given the lib id found from get_library_ids. This will include the basic
+        items in the library but not many details on them. use get_metadata for more.
+        
+        :param lib_id: id from get_library_ids
+        :type lib_id: str
+        :return: list of media in the library, basic info
+        :rtype: list
+        '''
         # length -1 is supposed to get all data but seems to be bugged
         data = self._get_resp(params={'cmd': 'get_library_media_info', 'section_id': lib_id, 'length': 99999})
         
@@ -79,6 +95,14 @@ class Tautulli_API:
         return data['data']
 
     def get_metadata(self, rating_key: str) -> dict:
+        '''
+        Get the most in depth data on a media. This includes basically everything needed for this application.
+
+        :param rating_key: rating key can be found from get_library, a plex value
+        :type rating_key: str
+        :return: metadata for that media, empty if it is not found
+        :rtype: dict
+        '''
         data = self._get_resp({'cmd': 'get_metadata', 'rating_key': rating_key})
 
         if data is None: 
@@ -86,8 +110,18 @@ class Tautulli_API:
         
         return data
 
-    # We can take the rating keys from here and feed to get_metadata but the extra info is not needed for now
     def get_children_metadata(self, rating_key: str) -> list:
+        '''
+        Series will have children for each season this (probebly episodes past that) this will
+        grab those using get_children_metadata api call. The response from the api is not super
+        detailed and in consistant with the rest of the data so we then call get_metadata using
+        the found rating key and return that instead. 
+                
+        :param rating_key: rating key of parent, current use case that is a season
+        :type rating_key: str
+        :return: list of metadata dicts for each child
+        :rtype: list
+        '''
         data = self._get_resp({'cmd': 'get_children_metadata', 'rating_key': rating_key})
 
         if data is None: 

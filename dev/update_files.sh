@@ -1,3 +1,7 @@
+###
+# Dev script to move files from PC to server
+###
+
 #!/bin/bash
 
 source ../.env
