@@ -142,7 +142,7 @@ class Jellyfin_API:
         list_prams = {
             'ParentId': '8cf846c44575191ccbf73d5e7840df75',
             'Limit': 10000,
-            'Fields': 'Path,MediaSources,Type'
+            'Fields': 'Path,MediaSources,Type,ProviderIds'
         }
         list_path = f"Users/{user_id}/Items"
 

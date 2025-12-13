@@ -3,7 +3,8 @@
 source ../.env
 
 TARGETS=(
-  "api" # Folder
+  "api" # folder
+  "obj" # folder
   "clearerr.py" 
   "name"
   "script"
@@ -21,10 +22,13 @@ fi
 case "$1" in
   pull)
     echo "Pulling files: server -> local"
+    
+    # rsync is annoying about folders
     rsync -rtvz --no-perms --no-owner --no-group "${REMOTE_PATH}api/" "${LOCAL_PATH}/api"
+    rsync -rtvz --no-perms --no-owner --no-group "${REMOTE_PATH}obj/" "${LOCAL_PATH}/obj"
 
     for f in "${TARGETS[@]}"; do
-      if [ "$f" != "api" ]; then
+      if [[ "$f" != "api" && "$f" != "obj" ]]; then
         rsync -rtvz --no-perms --no-owner --no-group "${REMOTE_PATH}${f}" "${LOCAL_PATH}/"
       fi
     done
@@ -33,11 +37,11 @@ case "$1" in
   push)
     echo "Pushing files: local -> server"
 
-    # rsync is annoying about folders
     rsync -rtvz --no-perms --no-owner --no-group "${LOCAL_PATH}/api/" "${REMOTE_PATH}api"
+    rsync -rtvz --no-perms --no-owner --no-group "${LOCAL_PATH}/obj/" "${REMOTE_PATH}obj"
 
     for f in "${TARGETS[@]}"; do
-      if [ "$f" != "api" ]; then
+      if [[ "$f" != "api" && "$f" != "obj" ]]; then
         rsync -rtvz --no-perms --no-owner --no-group "${LOCAL_PATH}/${f}" "${REMOTE_PATH}${f}"
       fi
     done

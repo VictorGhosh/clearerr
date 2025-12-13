@@ -70,8 +70,36 @@ class Tautulli_API:
         return libraries
 
     def get_library(self, lib_id: str) -> list:
-        data = self._get_resp(params={'cmd': 'get_library_media_info', 'section_id': lib_id, 'length': -1})
-        if data is None:
+        # length -1 is supposed to get all data but seems to be bugged
+        data = self._get_resp(params={'cmd': 'get_library_media_info', 'section_id': lib_id, 'length': 99999})
+        
+        if data is None or 'data' not in data:
+            return []
+
+        return data['data']
+
+    def get_metadata(self, rating_key: str) -> dict:
+        data = self._get_resp({'cmd': 'get_metadata', 'rating_key': rating_key})
+
+        if data is None: 
             return {}
         
-        # print(json.dumps(data['data'], indent=4))
+        return data
+
+    # We can take the rating keys from here and feed to get_metadata but the extra info is not needed for now
+    def get_children_metadata(self, rating_key: str) -> list:
+        data = self._get_resp({'cmd': 'get_children_metadata', 'rating_key': rating_key})
+
+        if data is None: 
+            return []
+
+        season_keys = []
+        for s in data['children_list']:
+            if s['media_type'] == 'season':
+                season_keys.append(s['rating_key'])
+        
+        res = []
+        for k in season_keys:
+            res.append(self.get_metadata(k))
+
+        return res

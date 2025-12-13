@@ -1,21 +1,29 @@
 # from plex_api import *
 from api.tautulli_api import Tautulli_API
 from api.jellyfin_api import Jellyfin_API
+from obj.library_obj import Library
+from obj.media_obj import *
 import json
 
-# client = Tautulli_API()
-# library_ids = client.get_library_ids()
-j = Jellyfin_API()
+l = Library()
 
+# Pull data from tautulli to fill initial fill library
+t = Tautulli_API()
+tlibraries = t.get_library_ids()
+
+for raw_m in t.get_library(tlibraries['Movies']):
+    metadata = t.get_metadata(raw_m['rating_key'])
+    
+    m = Movie(metadata['title'])
+    m.populate_from_tautilli(metadata)
+    
+    print(m)
+    # print(json.dumps(metadata, indent=4))
+
+# for s in t.get_library(tlibrays['TV Shows']):
+    # print(json.dumps(t.get_metadata(s['rating_key']), indent=4))
+    # print(json.dumps(t.get_children_metadata(s['rating_key']), indent=4))
+
+# j = Jellyfin_API()
 # for usr in j.get_users():
-#     print(f"{usr['Name']}: {usr['Id']}")
-#     for item in j.get_list_ids(usr['Id']):
-#         print(item['Id'])
-#         print(j.get_list_contents(item['Id'], usr['Id']))
-        # print(item)
-
-for usr in j.get_users():
-    print(j.get_user_playlist(usr['Id']))
-
-
-# print(j.get_list_contents('1071671e7bffa0532e930debee501d2e', 'dbdf147aa8384befb22ce1a48f790a0c'))
+    # print(j.get_user_playlist(usr['Id']))
