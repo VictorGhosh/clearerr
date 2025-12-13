@@ -11,9 +11,10 @@ FILES=(
   "clearerr.py"
   "plex_api.py"
   "tautulli_api.py"
+  "jellyfin_api.py"
   "name"
   "script"
-  ".env"
+  ".env"  
 )
 
 REMOTE_PATH="root@$UNRAID_IP:/boot/config/plugins/user.scripts/scripts/clearerr/"
