@@ -1,0 +1,14 @@
+# .env
+export DEBUG=1 # 1 for debug output 2 for prod
+
+export UNRAID_IP="" # Only in use for the dev update_files script
+
+export PLEX_IP=""
+export PLEX_TOKEN=""
+
+export TAUTULLI_IP=""
+export TAUTULLI_KEY=""
+
+export JELLYFIN_IP=""
+export JELLYFIN_KEY=""
+export JELLYFIN_LIST_NAME="" # The name to look for when looking for playlist
