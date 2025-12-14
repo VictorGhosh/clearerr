@@ -164,41 +164,4 @@ class Plex_API():
             for i in self.shows:
                 print(i)
 
-
-class _Media():
-    def __init__(self, name: str, path: str, date_added: str, last_watched: str):
-        self.name = name
-        self.path = path
-        self.date_added = date_added
-        self.last_watched = last_watched
-
-    def __str__(self):
-        return f"{self.name} - added: {self.date_added} - watched: {self.last_watched} - path: {self.path}"
-
-
-class Movie(_Media):
-    def __init__(self, name: str, path: str, date_added: str, last_watched: int):
-        super().__init__(name, path, date_added, last_watched)
-
-    def __str__(self):
-        return super().__str__()
-    
-
-class Season(_Media):
-    def __init__(self, name: str, path: str, date_added: str, last_watched: int):
-        super().__init__(name, path, date_added, last_watched)
-
-    def __str__(self):
-        return super().__str__()
-
-class Show(_Media):
-    def __init__(self, name: str, path: str, date_added: str, last_watched: int, seasons: list[Season]):
-        super().__init__(name, path, date_added, last_watched)
-        self.seasons = seasons
-
-    def __str__(self):  
-        seasons_str = ""
-        for i in self.seasons:
-            seasons_str += f"{i}," 
-
-        return f"{super().__str__()} - seasons: {seasons_str}"
+z

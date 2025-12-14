@@ -8,7 +8,8 @@ class _Media():
         # data for validation
         self.raw_tautilli_data = None
 
-        #IDs. Should consolidate these once I know which to use
+        # TODO: I think that seasons do not have imdb or tmdb but those could move up here if it turns out they do
+        #IDs.
         self.rating_key = None
         self.tvdb = None
 
@@ -46,8 +47,6 @@ class _Media():
         # validate we got the right metadata file
         if metadata['title'] != self.title:
             raise ValueError(f"Expected title {self.title} got {metadata['title']}")
-
-        self.path = metadata['media_info'][0]['parts'][0]['file']
         
         self.raw_tautilli_data = metadata
         
@@ -106,9 +105,12 @@ class Movie(_Media):
             if var is None:
                 raise ValueError(f"Missing value for media {self.title} index: {index}")
 
-class _Season(_Media):
+class Season(_Media):
     def __init__(self, title: str):
         super().__init__(title)
+
+    # def populate_from_tautilli(self, metadata: dict) -> None:
+        # super().populate_from_tautilli(metadata)
 
 class Show(_Media):
     def __init__(self, title: str):
@@ -117,8 +119,24 @@ class Show(_Media):
         self.imdb = None
         self.tmdb = None
         
-        # owns _Season objects
+        # owns Season objects
         self.seasons = []
+
+    def __str__(self):
+        pior = super().__str__()
+        partial = {
+            'imdb': self.imdb,
+            'tmdb': self.tmdb
+            }
+        res = f"{pior} - {partial} - Seasons:"
+        for s in self.seasons:
+            res += f"\n\t{str(s)}"
+        return res
 
     def populate_from_tautilli(self, metadata: dict) -> None:
         super().populate_from_tautilli(metadata)
+        for i in metadata['guids']:
+            if i.startswith('imdb://'):
+                self.imdb = i.split('imdb://')[-1]
+            elif i.startswith('tmdb://'):
+                self.tmdb = i.split('tmdb://')[-1]
