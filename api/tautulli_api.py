@@ -2,7 +2,6 @@ import os
 import requests
 import json
 
-DEBUG = os.environ.get("DEBUG")
 TAUTULLI_IP = os.environ.get("TAUTULLI_IP")
 TAUTULLI_KEY = os.environ.get("TAUTULLI_KEY")
 
