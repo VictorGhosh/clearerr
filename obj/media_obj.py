@@ -1,8 +1,9 @@
 class _Media():
     def __init__(self, title: str):
         self.title = title
-        # Should set only as needed as its a fairly intensive process for shows
-        self.path = None
+        
+        # Private; only set when needed due to intensive api calls required
+        self._path = None
 
         # data for validation
         self.raw_tautilli_data = None
@@ -14,13 +15,20 @@ class _Media():
         # watch data
         self.added_on = None
         self.last_watched = None
+    
+    @property
+    def path(self):
+        return self._path
+    
+    @path.setter
+    def path(self, path: str) -> None:
+        self._path = path
 
     def __str__(self):
         short_dict = {
             'title': self.title,
             'rating_key': self.rating_key,
             'tvdb': self.tvdb,
-            'path': self.path,
             'added': self.added_on,
             'last_watched': self.last_watched
         }

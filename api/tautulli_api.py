@@ -150,7 +150,7 @@ class Tautulli_API:
         meta data if we already have it e.g. movies
 
         FIXME: There is definitely a less time consuming method. not plex but maybe jellyfin. worst
-        case with some parsing we could just read the file system itself. this could be use to validate
+        case with some parsing we could just read the file system itself. this could be uses to validate
         when needed
         '''
         meta = self.get_metadata(rating_key)
@@ -174,11 +174,11 @@ class Tautulli_API:
                 raise ValueError(f"Bad path parsing found: {paths}")
             return paths[0]
 
-        # same recursive logic as was used for season above
+        # same recursive logic as was used for season above but back out one
         if meta['media_type'] == 'show':
             paths = []
             for season in self.get_children_metadata(rating_key):
-                paths.append(self.get_path(season['rating_key']))
+                paths.append(os.path.dirname(self.get_path(season['rating_key'])))
 
             paths = list(set(paths))
             if len(paths) != 1:
