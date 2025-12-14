@@ -110,6 +110,7 @@ class Tautulli_API:
         
         return data
 
+    # FIXME: This needs to be split, see get_path calling this many time; 2x api calls each when only one is needed
     def get_children_metadata(self, rating_key: str) -> list:
         '''
         Series will have children for each season this (probebly episodes past that) this will
@@ -122,18 +123,65 @@ class Tautulli_API:
         :return: list of metadata dicts for each child
         :rtype: list
         '''
-        data = self._get_resp({'cmd': 'get_children_metadata', 'rating_key': rating_key})
+        data = self._get_resp({'cmd': 'get_children_metadata', 'rating_key': rating_key, 'children_content_details': 1})
 
         if data is None: 
             return []
 
-        season_keys = []
+        child_keys = []
         for s in data['children_list']:
-            if s['media_type'] == 'season':
-                season_keys.append(s['rating_key'])
+            if s['media_type'] == 'season' or s['media_type'] == 'episode':
+                child_keys.append(s['rating_key'])
         
         res = []
-        for k in season_keys:
+        for k in child_keys:
             res.append(self.get_metadata(k))
 
         return res
+
+    def get_path(self, rating_key: str) -> str:
+        '''
+        get the path for a media at rating key. Validates this path for shows by checking every
+        season/eisode recursivly to make sure they are all in the same spot. will raise an error
+        otherise. This is fairly intensive and will need to be done simiarly for plex and jellyfin.
+        The plan is to only use when actually needed i.e. when deleting.
+
+        FIXME:See above fix for get_children_metadata. AFTER that this also does not need to get
+        meta data if we already have it e.g. movies
+
+        FIXME: There is definitely a less time consuming method. not plex but maybe jellyfin. worst
+        case with some parsing we could just read the file system itself. this could be use to validate
+        when needed
+        '''
+        meta = self.get_metadata(rating_key)
+
+        if meta['media_type'] == 'movie':
+            return meta['media_info'][0]['parts'][0]['file']
+        
+        # returns parent of episde, so season folder
+        if meta['media_type'] == 'episode':
+            return os.path.dirname(meta['media_info'][0]['parts'][0]['file'])
+
+        # get each episode in season recursivly get its location. validate they are all the same
+        if meta['media_type'] == 'season':
+            paths = []
+            for ep in self.get_children_metadata(rating_key):
+                paths.append(self.get_path(ep['rating_key']))
+
+            # only take unique paths and therine should be only one left else something is wrong
+            paths = list(set(paths))
+            if len(paths) != 1:
+                raise ValueError(f"Bad path parsing found: {paths}")
+            return paths[0]
+
+        # same recursive logic as was used for season above
+        if meta['media_type'] == 'show':
+            paths = []
+            for season in self.get_children_metadata(rating_key):
+                paths.append(self.get_path(season['rating_key']))
+
+            paths = list(set(paths))
+            if len(paths) != 1:
+                raise ValueError(f"Bad path parsing found: {paths}")
+            return paths[0]
+

@@ -1,0 +1,16 @@
+
+
+
+if type movie
+    return path
+
+if type episode
+    return parent path
+
+if type season
+    paths
+    for each episode in season
+        paths append parent dir of call self(episdoe id)
+
+    so long as paths are all the same
+    return path[0]

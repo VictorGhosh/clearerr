@@ -1,6 +1,7 @@
 class _Media():
     def __init__(self, title: str):
         self.title = title
+        # Should set only as needed as its a fairly intensive process for shows
         self.path = None
 
         # data for validation
@@ -27,7 +28,7 @@ class _Media():
 
     def populate_from_tautilli(self, metadata: dict) -> None:
         '''
-        At the moment tautilli is the chosend starter for media objects but others will be used to validate.
+        At the moment tautilli is the chosen starter for media objects but others will be used to validate.
         This method initalizes the attributes that can be grabbed from that app. In adding to this method
         we should try to keep with the order of attribute declarations as much as possible.
         
@@ -54,7 +55,6 @@ class _Media():
         # make sure manditory fields are not empty
         required = [
             self.title, 
-            self.path, 
             self.raw_tautilli_data,
             self.rating_key, 
             self.tvdb,
@@ -78,7 +78,6 @@ class Movie(_Media):
             'tmdb': self.tmdb
             }
         return f"{pior} - {partial}"
-
 
     def populate_from_tautilli(self, metadata: dict) -> None:
         super().populate_from_tautilli(metadata)
@@ -112,3 +111,6 @@ class Show(_Media):
         
         # owns _Season objects
         self.seasons = []
+
+    def populate_from_tautilli(self, metadata: dict) -> None:
+        super().populate_from_tautilli(metadata)
