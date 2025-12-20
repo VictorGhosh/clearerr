@@ -12,3 +12,6 @@ export TAUTULLI_KEY=""
 export JELLYFIN_IP=""
 export JELLYFIN_KEY=""
 export JELLYFIN_LIST_NAME="" # The name to look for when looking for playlist
+
+export RADARR_IP=""
+export RADARR_KEY=""
