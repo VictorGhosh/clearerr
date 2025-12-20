@@ -27,11 +27,22 @@ from api.radarr_api import Radarr_API
 # print("Validating object equivalency (jellyfin-tautulli)...", end=' ')
 # print("Warning: not implemented")
 
-r = Radarr_API()
-print(json.dumps(r.get_api_query("queue", [18]), indent=4))
+# r = Radarr_API()
+# print(json.dumps(r.get_api_query("queue", [18]), indent=4))
 
-print()
+# print()
 
-print(json.dumps(r.get_api_query("movie"), indent=4))
+# print(json.dumps(r.get_api_query("movie"), indent=4))
 
 # print(json.dumps(r.delete_movie(""), indent=4))
+
+from api.tautulli_api import Tautulli_API
+t = Tautulli_API()
+
+print(t.get_metadata('69'))
+
+for lib in t.get_api_query("get_libraries"):
+    if lib['section_name'] == 'Movies' or lib['section_name'] == 'TV Shows':
+        for media in t.get_api_query('get_library_media_info', params={'section_id': lib['section_id']}):
+            print(media['rating_key'])
+            print(t.get_path(media['rating_key']))

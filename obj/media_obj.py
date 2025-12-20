@@ -105,12 +105,11 @@ class Movie(_Media):
             if var is None:
                 raise ValueError(f"Missing value for media {self.title} index: {index}")
 
+
 class Season(_Media):
     def __init__(self, title: str):
         super().__init__(title)
 
-    # def populate_from_tautilli(self, metadata: dict) -> None:
-        # super().populate_from_tautilli(metadata)
 
 class Show(_Media):
     def __init__(self, title: str):

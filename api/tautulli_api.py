@@ -57,51 +57,36 @@ class Tautulli_API:
             print(f"Raw data: {data}")
             return None
 
-    def get_library_ids(self) -> dict:
-        '''
-        From the highest level plex library ids. seems to just be 1 for movies and 2 for tv shows
-        but I think this could change if collections get added in the future. 
-        
-        :return: library names and their ids
-        :rtype: dict
-        '''   
-        data = self._get_resp(params={'cmd': 'get_libraries'})
-        if data is None:
-            return {}
-        
-        libraries = {}
-        for lib in data:
-            libraries[lib['section_name']] = lib['section_id']
-        
-        return libraries
+    def get_api_query(self, query, params={}) -> json:
+        query = query.strip().lower()
 
-    def get_library(self, lib_id: str) -> list:
-        '''
-        Get library data given the lib id found from get_library_ids. This will include the basic
-        items in the library but not many details on them. use get_metadata for more.
-        
-        :param lib_id: id from get_library_ids
-        :type lib_id: str
-        :return: list of media in the library, basic info
-        :rtype: list
-        '''
-        # length -1 is supposed to get all data but seems to be bugged
-        data = self._get_resp(params={'cmd': 'get_library_media_info', 'section_id': lib_id, 'length': 99999})
-        
-        if data is None or 'data' not in data:
-            return []
+        match query:
+            # Library names, ids, number of childen etc.
+            case 'get_libraries':
+                return self._get_resp(params={'cmd': 'get_libraries'})
 
-        return data['data']
+            # Items in library. requires params={'section_id': 'x'} where x is library id
+            case 'get_library_media_info':
+                # remember -1 is broken so length needs to be high
+                params.update({'cmd': 'get_library_media_info', 'length': 99999})
+                return self._get_resp(params=params)['data']
+
+            # Full metadata for media. requires params={'rating_key': 'x'} where x is media rating key
+            case 'get_metadata':
+                params.update({'cmd': 'get_metadata'})
+                print(self._get_resp({'rating_key': '69', 'cmd': 'get_metadata'}))
+                return self._get_resp(params=params)
+
+            # Not actually metadata but children basic. requires params={'rating_key': 'x'} where x is parent rating key
+            case 'get_children_metadata':
+                patams.update({'cmd': 'get_children_metadata', 'children_content_details': 1})
+                return self._get_resp(patams=params)
+
+            case _:
+                raise ValueError(f"Unknown api query: {query}")
 
     def get_metadata(self, rating_key: str) -> dict:
-        '''
-        Get the most in depth data on a media. This includes basically everything needed for this application.
 
-        :param rating_key: rating key can be found from get_library, a plex value
-        :type rating_key: str
-        :return: metadata for that media, empty if it is not found
-        :rtype: dict
-        '''
         data = self._get_resp({'cmd': 'get_metadata', 'rating_key': rating_key})
 
         if data is None: 
@@ -134,7 +119,7 @@ class Tautulli_API:
         
         res = []
         for k in child_keys:
-            res.append(self.get_metadata(k))
+            res.append(self.get_api_query('get_metadata', {'rating_key': k}))
 
         return res
 
@@ -152,7 +137,9 @@ class Tautulli_API:
         case with some parsing we could just read the file system itself. this could be uses to validate
         when needed
         '''
-        meta = self.get_metadata(rating_key)
+        meta = self.get_api_query('get_metadata', {'rating_key': rating_key})
+
+        print(meta)
 
         if meta['media_type'] == 'movie':
             return meta['media_info'][0]['parts'][0]['file']

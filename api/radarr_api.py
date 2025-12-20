@@ -60,7 +60,7 @@ class Radarr_API:
                 return self._get_resp("/filesystem/mediafiles?path=%2Fdata%2Fmedia%2Fmovies")
             
             # basically all movie data; paths, ids, original and new names etc.
-            case "":
+            case "movie":
                 if "tmdbId" in params:
                     return self._get_resp(f"/movie?tmdbId={params['tmdbId']}&excludeLocalCovers=false")
                 return self._get_resp("/movie")
