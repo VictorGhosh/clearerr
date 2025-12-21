@@ -39,10 +39,13 @@ from api.radarr_api import Radarr_API
 from api.tautulli_api import Tautulli_API
 t = Tautulli_API()
 
-print(t.get_metadata('69'))
+# print(t.get_metadata('69'))
 
 for lib in t.get_api_query("get_libraries"):
     if lib['section_name'] == 'Movies' or lib['section_name'] == 'TV Shows':
-        for media in t.get_api_query('get_library_media_info', params={'section_id': lib['section_id']}):
-            print(media['rating_key'])
-            print(t.get_path(media['rating_key']))
+        for media in t.get_api_query('get_library_media_info', params={'section_id': lib['section_id']}):            
+
+            foo = t.get_api_query('get_metadatajs', {'rating_key': media['rating_key']})
+            if foo != {}:
+                print(f"META--{foo}")
+            # print(t.get_path(media['rating_key']))
