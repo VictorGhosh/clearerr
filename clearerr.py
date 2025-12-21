@@ -52,7 +52,13 @@ from api.plex_api import Plex_API
 
 p = Plex_API()
 for lib in p.get_api_query('get_libraries')['Directory']:
-    if lib['title'] == 'Movies' or lib['title'] == 'TV Shows':
-        print(json.dumps(p.get_api_query('get_library_items', {'section_id': lib['key']}), indent=4))
+    if lib['title'] == 'TV Shows':
+        for media in p.get_api_query('get_library_items', {'section_id': lib['key']})['Metadata']:
+            print(p.get_path(media['ratingKey']))
+            for season in p.get_api_query('get_children', {'rating_key': media['ratingKey']}):
+                print(f"--season: {p.get_path(season['ratingKey'])}")
 
-print(json.dumps(p.get_api_query('get_metadata', {'rating_key': '391'}), indent=4))
+# # print(json.dumps(p.get_api_query('get_children', {'rating_key': '126'}), indent=4))
+# print(json.dumps(p.get_api_query('get_children', {'rating_key': '221'}), indent=4))
+
+# print(json.dumps(p.get_path('221'), indent=4))
