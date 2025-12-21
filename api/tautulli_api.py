@@ -80,7 +80,7 @@ class Tautulli_API:
             # XXX: Depreciated/Not in use
             # Not actually metadata but children basic. requires params={'rating_key': 'x'} where x is parent rating key
             case 'get_children_metadata':
-                patams.update({'cmd': 'get_children_metadata', 'children_content_details': 1})
+                params.update({'cmd': 'get_children_metadata', 'children_content_details': 1})
                 return self._get_resp(patams=params)
 
             case catchall:
