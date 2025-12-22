@@ -5,60 +5,37 @@ import json
 
 from api.radarr_api import Radarr_API
 
-# print("Calculating storage...", end=' ')
-# print("Warning: not implemented")
+# p = Plex_API()
+# for lib in p.get_api_query('get_libraries')['Directory']:
+#     if lib['title'] == 'TV Shows':
+#         for media in p.get_api_query('get_library_items', {'section_id': lib['key']})['Metadata']:
+#             print(p.get_path(media['ratingKey']))
+#             for season in p.get_api_query('get_children', {'rating_key': media['ratingKey']}):
+#                 print(f"--season: {p.get_path(season['ratingKey'])}")
 
-# # None of the rest of the steps will happen if storage is not below threshhold
 
-# print("Building library object (tautulli)...", end=' ')
-# l = Library()
-# l.init_from_tautulli()
-# print("Done")
+def jprint(input: str) -> None:
+    print(json.dumps(input, indent=4))
 
-# print("Building library object (plex)...", end=' ')
-# print("Warning: not implemented")
+# from api.plex_api import Plex_API
+# p = Plex_API()
+# # for lib in p.get_api_query('get_libraries')['Directory']:
+# #     if lib['title'] == 'TV Shows' or lib['title'] == 'Movies':
+# #         for media in p.get_api_query('get_library_items', {'section_id': lib['key']})['Metadata']:
+# #             jprint(p.get_api_query('get_metadata', {'rating_key': media['ratingKey']}))
 
-# print("Building library object (jellyfin)...", end=' ')
-# print("Warning: not implemented")
+# # 309 == andor show 310 == season 1
+# jprint(p.get_api_query('get_metadata', {'rating_key': '310'}))
 
-# print("Validating object equivalency (plex-tautulli)...", end=' ')
-# print("Warning: not implemented")
+from api.jellyfin_api import Jellyfin_API
+j = Jellyfin_API()
+for vf in j.get_api_query('VirtualFolders'): 
+    if vf['Name'] == 'Movies' or vf['Name'] == 'Shows':
+        jprint(j.get_api_query('items', {'parent_id': vf['ItemId']}))
+        pass
 
-# print("Validating object equivalency (jellyfin-tautulli)...", end=' ')
-# print("Warning: not implemented")
+# Do not delete playlists
+# for usr in j.get_api_query('users'):
+#     for list in j.get_api_query('user/items', {'user_id': usr['Id']})['Items']:
+#         jprint(j.get_api_query('playlist/items', {'playlist_id': list['Id'], 'user_id': usr['Id']}))
 
-# r = Radarr_API()
-# print(json.dumps(r.get_api_query("queue", [18]), indent=4))
-
-# print()
-
-# print(json.dumps(r.get_api_query("movie"), indent=4))
-
-# print(json.dumps(r.delete_movie(""), indent=4))
-
-# from api.tautulli_api import Tautulli_API
-# t = Tautulli_API()
-
-# for lib in t.get_api_query("get_libraries"):
-#     if lib['section_name'] == 'Movies' or lib['section_name'] == 'TV Shows':
-#         for media in t.get_api_query('get_library_media_info', params={'section_id': lib['section_id']}):            
-
-#             foo = t.get_api_query('get_metadatajs', {'rating_key': media['rating_key']})
-#             if foo != {}:
-#                 print(f"META--{foo}")
-#             # print(t.get_path(media['rating_key']))
-
-from api.plex_api import Plex_API
-
-p = Plex_API()
-for lib in p.get_api_query('get_libraries')['Directory']:
-    if lib['title'] == 'TV Shows':
-        for media in p.get_api_query('get_library_items', {'section_id': lib['key']})['Metadata']:
-            print(p.get_path(media['ratingKey']))
-            for season in p.get_api_query('get_children', {'rating_key': media['ratingKey']}):
-                print(f"--season: {p.get_path(season['ratingKey'])}")
-
-# # print(json.dumps(p.get_api_query('get_children', {'rating_key': '126'}), indent=4))
-# print(json.dumps(p.get_api_query('get_children', {'rating_key': '221'}), indent=4))
-
-# print(json.dumps(p.get_path('221'), indent=4))
