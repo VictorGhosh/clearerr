@@ -2,13 +2,11 @@ class _Media():
     def __init__(self, title: str):
         self.title = title
         
-        # Private; only set when needed due to intensive api calls required for shows
         self._path = None
 
         # IDs
         self.rating_key = None
-        self.tmdb = None
-        self.tvdb = None
+        self.ids = {} # at least tmdb and tvdb
 
         # watch data
         self.added_on = None
@@ -23,19 +21,19 @@ class _Media():
         self._path = path
 
     def __str__(self):
-        short_dict = {
+        partial = {
             'title': self.title,
             'rating_key': self.rating_key,
             'added': self.added_on,
             'last_watched': self.last_watched
         }
-        return str(short_dict)
+        partial.update(self.ids)
+        return str(partial)
 
 
 class Movie(_Media):
     def __init__(self, title: str):
         super().__init__(title)
-        self.imdb = None # Seasons do not have
 
 
 class Season(_Media):
@@ -46,5 +44,13 @@ class Season(_Media):
 class Show(_Media):
     def __init__(self, title: str):
         super().__init__(title)
-        self.imdb = None # Seasons do not have
         self.seasons = []
+
+    def __str__(self):
+        partial = super().__str__()
+        
+        seasons_str = ''
+        for s in self.seasons:
+            seasons_str += f"\n\t{s}"
+            
+        return f"{partial} - Seasons:{seasons_str}"

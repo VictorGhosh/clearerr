@@ -1,39 +1,61 @@
-from api.tautulli_api import Tautulli_API
-from api.radarr_api import Radarr_API
 from obj.media_obj import *
+from api.plex_api import Plex_API
+
+import json
 
 class Library():
     def __init__(self):
         self.media = []
+        self._build_from_plex()
 
-        self._t = Tautulli_API()
-        # self.raw_tautilli = 
+    def _build_from_plex(self) -> list:
+        p = Plex_API()
 
-        self._r = Radarr_API()
-        self.raw_radarr = self._r.get_api_query("movie")
+        for lib in p.get_api_query('get_libraries')['Directory']:
+            if lib['title'] == 'Movies' or lib['title'] == 'TV Shows':
+                for media in p.get_api_query('get_library_items', {'section_id': lib['key']}):
 
-    # def _generate_tautulli_data(self)
+                    # settings for movies only
+                    if lib['title'] == 'Movies':
+                        media_obj = Movie(media['title'])
+                        media_obj.path = media['Media'][0]['Part'][0]['file']
+                    
+                    # settings for shows only
+                    elif lib['title'] == 'TV Shows':
+                        media_obj = Show(media['title'])
 
-    # def init_from_tautulli(self) -> None:
-    #     tlibraries = self._t.get_library_ids()
+                        for c in p.get_api_query('get_children', {'rating_key': media['ratingKey']}):
+                            season = Season(c['title'])
+                            # TODO: set path when its better (see method fixme)
 
-    #     for raw_m in self._t.get_library(tlibraries['Movies']):
-    #         metadata = self._t.get_metadata(raw_m['rating_key'])
-    #         m = Movie(metadata['title'])
-    #         m.populate_from_tautilli(metadata)
-    #         self.media.append(m)
+                            season.rating_key = c.get('ratingKey')
+                            season.added_on = c.get('addedAt')
+                            season.last_watched = c.get('lastViewedAt')
 
-    #     for raw_s in self._t.get_library(tlibraries['TV Shows']):
-    #         metadata = self._t.get_metadata(raw_s['rating_key'])
-    #         s = Show(metadata['title'])
-    #         s.populate_from_tautilli(metadata)
+                            for i in c.get('Guid'):
+                                id = i.get('id')
+                                if id.startswith('tmdb://'):
+                                    season.ids['tmdb'] = id.split('tmdb://')[-1]
+                                elif id.startswith('tvdb://'):
+                                    season.ids['tvdb'] = id.split('tvdb://')[-1] 
+                            
+                            media_obj.seasons.append(season)
 
-    #         for season_meta in self._t.get_children_metadata(s.rating_key):
-    #             season = Season(season_meta['title'])
-    #             season.populate_from_tautilli(season_meta)
-    #             s.seasons.append(season)
-            
-    #         self.media.append(s)        
+                    # settings for both movies and shows
+                    media_obj.rating_key = media.get('ratingKey')
+                    media_obj.added_on = media.get('addedAt')
+                    media_obj.last_watched = media.get('lastViewedAt') # json var exists there is value
+
+                    for i in media.get('Guid'):
+                        id = i.get('id')
+                        if id.startswith('tmdb://'):
+                            media_obj.ids['tmdb'] = id.split('tmdb://')[-1]
+                        elif id.startswith('tvdb://'):
+                            media_obj.ids['tvdb'] = id.split('tvdb://')[-1] 
+                        elif id.startswith('imdb://'):
+                            media_obj.ids['imdb'] = id.split('imdb://')[-1]
+
+                    self.media.append(media_obj)
 
     def __str__(self):
         res = ''

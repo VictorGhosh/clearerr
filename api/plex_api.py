@@ -57,19 +57,43 @@ class Plex_API():
             
             # Items in library including path and lastwached. most in {Metadata: []} requires params={'section_id': 'x'}
             case 'get_library_items':
-                return self._get_resp(f"/library/sections/{params['section_id']}/all")
+                payload = {
+                    'includeGuids': 1,
+                    'includeAdvanced': 1
+                }
+                endpoint = f"/library/sections/{params['section_id']}/all"
+                return self._get_resp(endpoint, params=payload).get('Metadata', [])
 
+            # XXX: I've been moving twards minimizing use of this in favor of adding data to payload of others
             # Full metadata for media. requires params={'rating_key': 'x'}
             case 'get_metadata':
                 return self._get_resp(f"/library/metadata/{params['rating_key']}")
             
             # Children data of media at rating_key, get more with metadata. requires params={'rating_key': 'x'}
             case 'get_children':
-                return self._get_resp(f"/library/metadata/{params['rating_key']}/children").get('Metadata', [])
+                payload = {
+                    'includeGuids': 1,
+                    'includeAdvanced': 1
+                }
+                endpoint = f"/library/metadata/{params['rating_key']}/children"
+                return self._get_resp(endpoint, params=payload).get('Metadata', [])
+            
+            # TODO: Implement this in Plex_API().get_path() see fixme there
+            # All episodes of a show, requires params={'rating_key': x} the seires rating key
+            case 'get_leaves':
+                payload = {
+                    'includeGuids': 1,
+                    'includeExternalMedia': 1
+                }
+                endpoint = f"/library/metadata/{params['rating_key']}/allLeaves"
+                return self._get_resp(endpoint, params=payload).get('Metadata', [])
 
             case catchall:
                 raise ValueError(f"Unknown api query: {catchall}")
-            
+    
+    # FIXME: This code sucks, cool that its recursive takes but way too many api calls. I did not know
+    # about the "allLeaves" enpoiint when I wrote it but using that we can get this down to a single 
+    # api call per series. 
     def get_path(self, rating_key: str):
         '''
         Get the path for any media. Path for shows and seasons is recursively validated for 
