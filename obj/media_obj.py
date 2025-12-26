@@ -11,7 +11,7 @@ class _Media():
         # watch data
         self.added_on = None
         self.last_watched = None
-    
+
     @property
     def path(self):
         return self._path
@@ -29,7 +29,15 @@ class _Media():
         }
         partial.update(self.ids)
         return str(partial)
-
+    
+    # def __eq__(self, other):
+    #     if isinstance(other, _Media):
+    #         return (self.title == other.title and
+    #                 self._path == other.path and
+    #                 self.rating_key == other.rating_key and
+    #                 self.ids['tmdb'] == other.ids['tmdb'])
+    #     else:
+    #         return NotImplemented
 
 class Movie(_Media):
     def __init__(self, title: str):

@@ -11,7 +11,7 @@ class Jellyfin_API:
     def __init__(self, base_url=BASE_URL, api_key=JELLYFIN_KEY):
         self.base_url = base_url
         self.api_key = api_key
-        # Jellyfin usually prefers the token in the Header
+
         self.headers = {
             "X-Emby-Token": self.api_key,
             "Content-Type": "application/json"
