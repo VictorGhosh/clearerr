@@ -88,38 +88,46 @@ class Library():
                         media_obj.path = media.get('Path')
                         media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
                                          'tmdb': media.get('ProviderIds').get('Tmdb')}
+                        media_obj.jellyfin_id = media.get('Id')
                         self.movies.append(media_obj)
 
                     elif lib_type == 'Shows':
 
+                        # jprint(media)
                         
                         if media['Type'] == 'Series':
                             media_obj = Show(media['Name'])
                             media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
                                              'tmdb': media.get('ProviderIds').get('Tmdb'),
                                              'tvdb': media.get('ProviderIds').get('Tvdb')}
+                            media_obj.jellyfin_id = media.get('Id')
                             self.shows.append(media_obj)
                         
                         elif media['Type'] == 'Season':
                             season_data.append(media)
 
             # After basic parsing add seasons to series, they seem to come after the show but to be safe I am doing seperate
-            for s in season_data:
+            for season in season_data:
                 
                 # Find parent object from list
                 parent_obj = None
-                for m in self.shows:
-                    if m.title == s.get('SeriesName'):
-                        parent_obj = m
-                        break
-                    raise ValueError(f"Failed to find parent for {m}")
-                
-                # FIXME: There is a jellyfin id I could use but I am not adding it to the objects. Don't be lazy and use it
+                for show in self.shows:
 
-                season_obj = Season(s['Name'])
-                season_obj.path = s.get('Path')
-                season_obj.ids = {'tvdb': s.get('ProviderIds').get('Tvdb')}
+                    if not isinstance(show, Show):
+                        raise TypeError(f'Expected only shows but found {show}')
+    
+                    if season.get('SeriesId') == show.jellyfin_id:
+                        parent_obj = show
+                        break
+
+                if parent_obj is None:
+                    raise ValueError(f"Failed to find parent for {season}")
                 
+                season_obj = Season(season['Name'])
+                season_obj.path = season.get('Path')
+                season_obj.ids = {'tvdb': season.get('ProviderIds').get('Tvdb')}
+                season_obj.jellyfin_id = media.get('Id')
+
                 parent_obj.seasons.append(season_obj)
 
     def __str__(self):

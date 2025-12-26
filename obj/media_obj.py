@@ -5,7 +5,8 @@ class _Media():
         self._path = None
 
         # IDs
-        self.rating_key = None
+        self.rating_key = None # Plex apps
+        self.jellyfin_id = None # Jellyfin apps
         self.ids = {} # at least tmdb and tvdb
 
         # watch data
