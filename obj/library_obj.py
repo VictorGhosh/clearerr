@@ -2,12 +2,6 @@ from obj.media_obj import *
 from api.plex_api import Plex_API
 from api.jellyfin_api import Jellyfin_API
 
-#temp
-import json
-
-def jprint(input: str) -> None:
-    print(json.dumps(input, indent=4))
-
 class Library():
     def __init__(self):
         self.movies = []
