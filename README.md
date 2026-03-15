@@ -1,20 +1,35 @@
 # clearerr
 
-Unsatisfied with current open source options for media deletion/space creation on plexarr stacks,  I’ve decided to make my own.
+A self-hosted automation tool for managing storage on a Plexarr stack. Built out of my personal annoyance with existing options that don't account for actual disk usage or user preferences when deciding what to remove.
 
-I believe the ideal server in this use should always sit at %80-%90 capacity. Any less and you’re wasting storage that already been paid for. Any more and you have to manually and consistently clear space to allow for new material. To that end I need the removal automation to consider the current library storage usage.
+## The Problem
 
-It should also remove media in an organized sorted fashion, probably based on when it was added to the library and when or if it was watched.
+A media server with only 50% storage used is wasting expensive storage space, while the same server running at 95% requires a full time babysitter to manually and frequently cleanup. Existing tools like Maintainerr don't solve this issue as the removal logic is not ideal and data collection limited by the plex api.
 
-I also wanted the ability for users to mark media as “do not delete”, or even “please delete”. These would be things they plan on watching but have not gotten around to, or that they plan on rewatching in the future
+## How it Works
 
-This has proven to be the most annoying process. Maintainerr offers an “is watchlisted” flag but this only considers the root users watchlist (if that) as Plex watchlists are cloud based and not accessible through the API. I did attempt to use collections instead but Plex, in their infinite wisdom, have decided not to allow users to create or add to collections unless they are Plex Pass holders; even if they are in the home group.
+clearerr builds a library model by querying Plex, Jellyfin, and Tautulli internal APIs. Then it will apply custom rules to identify media candidates for removal based on:
+- Time since added
+- Watch history stats
+- Current disk utilization
+- User set exemptions and requests
 
-Ultimately I turned to Jellyfin for this need among other uses as Plex becomes less and less of a step up. I create accounts for my Plex users in Jellyfin and they add the media to save from removal to a folder called “Removal Exempt” or something similar. These playlists are local and API callable and the process is not overly painful as both services are being hosted on the same server with the same library.
+Removal exemptions are managed through Jellyfin. Users may mark media in a designated playlist and the tool will respect these items as removal exempt or next up for deletion, depending on the list. The use of Jellyfin for this purpose side steps the limitations of the Plex API.
 
-## Task List
-In no particular order:
-- [ ] Build sonarr api
+## Architecture
+
+- obj/        - core data model objects (Library, Show, Season, Movie)
+- api/        - API clients for Plex, Jellyfin, Radarr, and Tautulli
+- dev/        - dev tools
+- clearerr.py - Main entry from script (shell in current form) 
+
+## Status
+
+Data collection, validation, and object modeling are complete for Plex, Jellyfin, and Tautulli. We can successfully build the library model using these sources. Removal execution and rule logic is in active development. Following this, Library object validation will also be added.
+
+### Remaining before stable state:
+
+- [ ] Build out sonarr api
 
 - [ ] Library validation - This should use all apis data and validate that the library object has accurate data in terms of names, paths, and sizes. Most importantly the library must be complete
 
@@ -27,4 +42,4 @@ In no particular order:
 
 - [ ] Seerr api - I need to find out if seerr is going to re-request after removal. If so we will need to stop it.
 
-- [ ] File and disk sizes - still have not fully landed on how this will work. Can I trust any of the other apis to have accurate file size data as plex seems be just making it up 
+- [ ] File and disk sizes - still have not fully landed on how this will work. Can I trust any of the other apis to have accurate file size data as plex seems be just making it up.
