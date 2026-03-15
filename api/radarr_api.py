@@ -14,11 +14,12 @@ class Radarr_API:
 
     def _get_resp(self, endpoint=None) -> json:
         headers = {"X-Api-Key": self.api_key}
+        
         # http requesting and network error handling
         try:
             resp = requests.get(f"{self.base_url}{endpoint}", headers=headers, timeout=15)
-           
             resp.raise_for_status() 
+            
         except requests.exceptions.Timeout:
             print("Error making API request: Request timed out.")
             return None
@@ -60,7 +61,7 @@ class Radarr_API:
                 return self._get_resp("/filesystem/mediafiles?path=%2Fdata%2Fmedia%2Fmovies")
             
             # basically all movie data; paths, ids, original and new names etc.
-            case "":
+            case "movie":
                 if "tmdbId" in params:
                     return self._get_resp(f"/movie?tmdbId={params['tmdbId']}&excludeLocalCovers=false")
                 return self._get_resp("/movie")
@@ -77,8 +78,8 @@ class Radarr_API:
         
                 return self._get_resp(f"/queue{final_paramaters}")
 
-            case _:
-                raise ValueError(f"Unknown api query: {query}")
+            case catchall:
+                raise ValueError(f"Unknown api query: {catchall}")
 
 
     def delete_movie(self, movie_id: str):

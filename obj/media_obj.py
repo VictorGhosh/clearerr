@@ -2,21 +2,17 @@ class _Media():
     def __init__(self, title: str):
         self.title = title
         
-        # Private; only set when needed due to intensive api calls required
         self._path = None
 
-        # data for validation
-        self.raw_tautilli_data = None
-
-        # TODO: I think that seasons do not have imdb or tmdb but those could move up here if it turns out they do
-        #IDs.
-        self.rating_key = None
-        self.tvdb = None
+        # IDs
+        self.rating_key = None # Plex apps
+        self.jellyfin_id = None # Jellyfin apps
+        self.ids = {} # at least tmdb and tvdb
 
         # watch data
         self.added_on = None
         self.last_watched = None
-    
+
     @property
     def path(self):
         return self._path
@@ -26,117 +22,53 @@ class _Media():
         self._path = path
 
     def __str__(self):
-        short_dict = {
+        partial = {
             'title': self.title,
             'rating_key': self.rating_key,
-            'tvdb': self.tvdb,
             'added': self.added_on,
             'last_watched': self.last_watched
         }
-        return str(short_dict)
-
-    def populate_from_tautilli(self, metadata: dict) -> None:
-        '''
-        At the moment tautilli is the chosen starter for media objects but others will be used to validate.
-        This method initalizes the attributes that can be grabbed from that app. In adding to this method
-        we should try to keep with the order of attribute declarations as much as possible.
-        
-        :param metadata: metadata from tautilli api
-        :type metadata: dict
-        '''
-        # validate we got the right metadata file
-        if metadata['title'] != self.title:
-            raise ValueError(f"Expected title {self.title} got {metadata['title']}")
-        
-        self.raw_tautilli_data = metadata
-        
-        self.rating_key = metadata['rating_key']
-        for i in metadata['guids']:
-            if i.startswith('tvdb://'):
-                self.tvdb = i.split('tvdb://')[-1]
-                break
-
-        self.added_on = metadata['added_at']
-        self.last_watched = metadata['last_viewed_at']
-
-        # make sure manditory fields are not empty
-        required = [
-            self.title, 
-            self.raw_tautilli_data,
-            self.rating_key, 
-            self.tvdb,
-            self.added_on
-            ]
-        for index, var in enumerate(required):
-            if var is None:
-                raise ValueError(f"Missing value for media {self.title} index: {index} (see required list here)")
+        partial.update(self.ids)
+        return str(partial)
+    
+    '''
+    TODO: 
+    Not that simple. and not super important until I am actually using jellyfin, so implement this then
+        - Jellyfin does not seem to be scanning library on its own for updates. need to schedule 
+            that and get logic in place to run a scan when the libraries do not match (not here).
+        - Also need to put some thought into how this should work. The ID values themselves are consistant
+            but plex and jellyfin mix and match what IDs they use for each media type. You CANNOT 
+            rely on or even include titles. Capitals and spaces are not consistant (tron or TRON)
+            but more importantly for some unique titles the actual words are different!
+            (PLUR1BUS or PLURIBUS) For the latter there is no reasonable way to get consistant good
+            results that I can think of so we must work with IDs only
+    '''
+    # def __eq__(self, other):
+    #     if isinstance(other, type(self)):
+    #         return self.title == other.title
+    #     else:
+    #         return false
 
 class Movie(_Media):
     def __init__(self, title: str):
         super().__init__(title)
-        # IDs
-        self.imdb = None
-        self.tmdb = None
 
-    def __str__(self):
-        pior = super().__str__()
-        partial = {
-            'imdb': self.imdb,
-            'tmdb': self.tmdb
-            }
-        return f"{pior} - {partial}"
-
-    def populate_from_tautilli(self, metadata: dict) -> None:
-        super().populate_from_tautilli(metadata)
-        
-        if metadata['media_type'] != 'movie':
-            raise ValueError(f"Expected type was movie, got {metadata['media_type']}")
-
-        # guids stored in an odd list
-        for i in metadata['guids']:
-            if i.startswith('imdb://'):
-                self.imdb = i.split('imdb://')[-1]
-            elif i.startswith('tmdb://'):
-                self.tmdb = i.split('tmdb://')[-1]
-
-        # make sure fields are not empty
-        required = [self.imdb, self.tmdb]
-        for index, var in enumerate(required):
-            if var is None:
-                raise ValueError(f"Missing value for media {self.title} index: {index}")
 
 class Season(_Media):
     def __init__(self, title: str):
         super().__init__(title)
 
-    # def populate_from_tautilli(self, metadata: dict) -> None:
-        # super().populate_from_tautilli(metadata)
 
 class Show(_Media):
     def __init__(self, title: str):
         super().__init__(title)
-        # IDs
-        self.imdb = None
-        self.tmdb = None
-        
-        # owns Season objects
         self.seasons = []
 
     def __str__(self):
-        pior = super().__str__()
-        partial = {
-            'imdb': self.imdb,
-            'tmdb': self.tmdb
-            }
-        res = f"{pior} - {partial} - Seasons:"
+        partial = super().__str__()
+        
+        seasons_str = ''
         for s in self.seasons:
-            res += f"\n\t{str(s)}"
-        return res
-
-    def populate_from_tautilli(self, metadata: dict) -> None:
-        super().populate_from_tautilli(metadata)
-        for i in metadata['guids']:
-            if i.startswith('imdb://'):
-                self.imdb = i.split('imdb://')[-1]
-            elif i.startswith('tmdb://'):
-                self.tmdb = i.split('tmdb://')[-1]
+            seasons_str += f"\n\t{s}"
+            
+        return f"{partial} - Seasons:{seasons_str}"

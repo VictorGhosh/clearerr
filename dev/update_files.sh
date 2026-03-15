@@ -9,10 +9,12 @@ source ../.env
 TARGETS=(
   "api" # folder
   "obj" # folder
-  "clearerr.py" 
-  "name"
+  # "lib"
+  "clearerr.py"
+  "requirements.txt"
+  # "name"
   "script"
-  ".env"  
+  ".env"
 )
 
 REMOTE_PATH="root@$UNRAID_IP:/boot/config/plugins/user.scripts/scripts/clearerr/"

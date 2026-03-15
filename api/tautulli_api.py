@@ -32,7 +32,7 @@ class Tautulli_API:
         # http requesting and network error handling
         try:
             resp = requests.get(self.base_url, params=full_params, timeout=15)
-            resp.raise_for_status() 
+            resp.raise_for_status()
         
         except requests.exceptions.Timeout:
             print("Error making API request: Request timed out.")
@@ -57,130 +57,31 @@ class Tautulli_API:
             print(f"Raw data: {data}")
             return None
 
-    def get_library_ids(self) -> dict:
-        '''
-        From the highest level plex library ids. seems to just be 1 for movies and 2 for tv shows
-        but I think this could change if collections get added in the future. 
-        
-        :return: library names and their ids
-        :rtype: dict
-        '''   
-        data = self._get_resp(params={'cmd': 'get_libraries'})
-        if data is None:
-            return {}
-        
-        libraries = {}
-        for lib in data:
-            libraries[lib['section_name']] = lib['section_id']
-        
-        return libraries
+    def get_api_query(self, query, params={}) -> json:
+        query = query.strip().lower()
 
-    def get_library(self, lib_id: str) -> list:
-        '''
-        Get library data given the lib id found from get_library_ids. This will include the basic
-        items in the library but not many details on them. use get_metadata for more.
-        
-        :param lib_id: id from get_library_ids
-        :type lib_id: str
-        :return: list of media in the library, basic info
-        :rtype: list
-        '''
-        # length -1 is supposed to get all data but seems to be bugged
-        data = self._get_resp(params={'cmd': 'get_library_media_info', 'section_id': lib_id, 'length': 99999})
-        
-        if data is None or 'data' not in data:
-            return []
+        match query:
+            # Library names, ids, number of childen etc.
+            case 'get_libraries':
+                return self._get_resp(params={'cmd': 'get_libraries'})
 
-        return data['data']
+            # Items in library. requires params={'section_id': 'x'} where x is library id
+            case 'get_library_media_info':
+                # remember -1 is broken so length needs to be high
+                params.update({'cmd': 'get_library_media_info', 'length': 99999})
+                return self._get_resp(params=params)['data']
 
-    def get_metadata(self, rating_key: str) -> dict:
-        '''
-        Get the most in depth data on a media. This includes basically everything needed for this application.
+            # NOTE: data only for watched items else returns {}
+            # Full metadata for media. requires params={'rating_key': 'x'} where x is media rating key
+            case 'get_metadata':
+                params.update({'cmd': 'get_metadata'})
+                return self._get_resp(params=params)
 
-        :param rating_key: rating key can be found from get_library, a plex value
-        :type rating_key: str
-        :return: metadata for that media, empty if it is not found
-        :rtype: dict
-        '''
-        data = self._get_resp({'cmd': 'get_metadata', 'rating_key': rating_key})
+            # XXX: Depreciated/Not in use
+            # Not actually metadata but children basic. requires params={'rating_key': 'x'} where x is parent rating key
+            case 'get_children_metadata':
+                params.update({'cmd': 'get_children_metadata', 'children_content_details': 1})
+                return self._get_resp(patams=params)
 
-        if data is None: 
-            return {}
-        
-        return data
-
-    # FIXME: This needs to be split, see get_path calling this many time; 2x api calls each when only one is needed
-    def get_children_metadata(self, rating_key: str) -> list:
-        '''
-        Series will have children for each season this (probebly episodes past that) this will
-        grab those using get_children_metadata api call. The response from the api is not super
-        detailed and in consistant with the rest of the data so we then call get_metadata using
-        the found rating key and return that instead. 
-                
-        :param rating_key: rating key of parent, current use case that is a season
-        :type rating_key: str
-        :return: list of metadata dicts for each child
-        :rtype: list
-        '''
-        data = self._get_resp({'cmd': 'get_children_metadata', 'rating_key': rating_key, 'children_content_details': 1})
-
-        if data is None: 
-            return []
-
-        child_keys = []
-        for s in data['children_list']:
-            if s['media_type'] == 'season' or s['media_type'] == 'episode':
-                child_keys.append(s['rating_key'])
-        
-        res = []
-        for k in child_keys:
-            res.append(self.get_metadata(k))
-
-        return res
-
-    def get_path(self, rating_key: str) -> str:
-        '''
-        get the path for a media at rating key. Validates this path for shows by checking every
-        season/eisode recursivly to make sure they are all in the same spot. will raise an error
-        otherise. This is fairly intensive and will need to be done simiarly for plex and jellyfin.
-        The plan is to only use when actually needed i.e. when deleting.
-
-        FIXME:See above fix for get_children_metadata. AFTER that this also does not need to get
-        meta data if we already have it e.g. movies
-
-        FIXME: There is definitely a less time consuming method. not plex but maybe jellyfin. worst
-        case with some parsing we could just read the file system itself. this could be uses to validate
-        when needed
-        '''
-        meta = self.get_metadata(rating_key)
-
-        if meta['media_type'] == 'movie':
-            return meta['media_info'][0]['parts'][0]['file']
-        
-        # returns parent of episde, so season folder
-        if meta['media_type'] == 'episode':
-            return os.path.dirname(meta['media_info'][0]['parts'][0]['file'])
-
-        # get each episode in season recursivly get its location. validate they are all the same
-        if meta['media_type'] == 'season':
-            paths = []
-            for ep in self.get_children_metadata(rating_key):
-                paths.append(self.get_path(ep['rating_key']))
-
-            # only take unique paths and therine should be only one left else something is wrong
-            paths = list(set(paths))
-            if len(paths) != 1:
-                raise ValueError(f"Bad path parsing found: {paths}")
-            return paths[0]
-
-        # same recursive logic as was used for season above but back out one
-        if meta['media_type'] == 'show':
-            paths = []
-            for season in self.get_children_metadata(rating_key):
-                paths.append(os.path.dirname(self.get_path(season['rating_key'])))
-
-            paths = list(set(paths))
-            if len(paths) != 1:
-                raise ValueError(f"Bad path parsing found: {paths}")
-            return paths[0]
-
+            case catchall:
+                raise ValueError(f"Unknown api query: {catchall}")
