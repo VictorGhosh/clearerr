@@ -31,14 +31,23 @@ class _Media():
         partial.update(self.ids)
         return str(partial)
     
+    '''
+    TODO: 
+    Not that simple. and not super important until I am actually using jellyfin, so implement this then
+        - Jellyfin does not seem to be scanning library on its own for updates. need to schedule 
+            that and get logic in place to run a scan when the libraries do not match (not here).
+        - Also need to put some thought into how this should work. The ID values themselves are consistant
+            but plex and jellyfin mix and match what IDs they use for each media type. You CANNOT 
+            rely on or even include titles. Capitals and spaces are not consistant (tron or TRON)
+            but more importantly for some unique titles the actual words are different!
+            (PLUR1BUS or PLURIBUS) For the latter there is no reasonable way to get consistant good
+            results that I can think of so we must work with IDs only
+    '''
     # def __eq__(self, other):
-    #     if isinstance(other, _Media):
-    #         return (self.title == other.title and
-    #                 self._path == other.path and
-    #                 self.rating_key == other.rating_key and
-    #                 self.ids['tmdb'] == other.ids['tmdb'])
+    #     if isinstance(other, type(self)):
+    #         return self.title == other.title
     #     else:
-    #         return NotImplemented
+    #         return false
 
 class Movie(_Media):
     def __init__(self, title: str):

@@ -133,3 +133,12 @@ class Library():
         for s in self.shows:
             res += f'{str(s)}\n'
         return res
+
+    def __eq__(self, other):
+        raise NotImplementedError("Must implement eq in media objects first")
+        
+        if not isinstance(other, Library):
+            return False
+
+        return self.movies == other.movies and self.shows == other.shows
+        

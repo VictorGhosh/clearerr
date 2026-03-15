@@ -16,14 +16,16 @@ def jprint(input: str) -> None:
     print(json.dumps(input, indent=4))
 
 print("From Plex")
-l = Library()
-l.build_from_plex()
-print(l)
+pl = Library()
+pl.build_from_plex()
+print(pl)
 
 print('From Jellyfin')
 jl = Library()
 jl.build_from_jellyfin()
 print(jl)
+
+print(f"Plex lib == Jellyfin lib: {(pl == jl)}")
 
 # Plex testing
 # p = Plex_API()
