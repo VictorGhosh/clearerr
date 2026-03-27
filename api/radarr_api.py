@@ -85,7 +85,7 @@ class Radarr_API:
     def delete_movie(self, movie_id: str):
         '''
         Delete and unmonitor movie from radarr and media folder. Does not remove from
-        download client and weather or not seerr will re-request is unknown
+        download client and whether or not seerr will re-request is unknown
         
         :param movie_id: radarr movie id. Not a standardized number just the radarr one
         :type movie_id: str

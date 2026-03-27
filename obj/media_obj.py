@@ -37,7 +37,7 @@ class _Media():
         - Jellyfin does not seem to be scanning library on its own for updates. need to schedule 
             that and get logic in place to run a scan when the libraries do not match (not here).
         - Also need to put some thought into how this should work. The ID values themselves are consistant
-            but plex and jellyfin mix and match what IDs they use for each media type. You CANNOT 
+            but plex and jellyfin mix an match what IDs they use for each media type. You CANNOT 
             rely on or even include titles. Capitals and spaces are not consistant (tron or TRON)
             but more importantly for some unique titles the actual words are different!
             (PLUR1BUS or PLURIBUS) For the latter there is no reasonable way to get consistant good
