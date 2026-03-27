@@ -1,31 +1,42 @@
+# Add lib directory to path don't lose imports (maintine order of imports)
 import sys
 import os
-
-# Add lib directory to path
 lib_path = os.path.join(os.path.dirname(__file__), 'lib')
 if lib_path not in sys.path:
     sys.path.insert(0, lib_path)
 
-# from plex_api import *
-from obj.library_obj import Library
-from obj.media_obj import *
 import json
-from api.plex_api import Plex_API 
+from obj.library_obj import Library
 
 def jprint(input: str) -> None:
     print(json.dumps(input, indent=4))
 
-print("From Plex")
-pl = Library()
-pl.build_from_plex()
-print(pl)
 
-print('From Jellyfin')
-jl = Library()
-jl.build_from_jellyfin()
-print(jl)
+'''active radarr api development'''
 
-print(f"Plex lib == Jellyfin lib: {(pl == jl)}")
+from api.radarr_api import Radarr_API
+
+r = Radarr_API()
+foo = r.get_api_query("filesystem/mediafiles")
+jprint(foo)
+
+'''end active radarr api development'''
+
+
+'''main debugging view'''
+# print("From Plex")
+# pl = Library()
+# pl.build_from_plex()
+# print(pl)
+
+# print('From Jellyfin')
+# jl = Library()
+# jl.build_from_jellyfin()
+# print(jl)
+
+# print(f"Plex lib == Jellyfin lib: {(pl == jl)}")
+'''end main debugging view'''
+
 
 # Plex testing
 # p = Plex_API()

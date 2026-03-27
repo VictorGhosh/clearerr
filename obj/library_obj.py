@@ -123,7 +123,7 @@ class Library():
                 season_obj.jellyfin_id = media.get('Id')
 
                 parent_obj.seasons.append(season_obj)
-
+    
     def __str__(self):
         res = f'Movies ({len(self.movies)} total):\n'
         for m in self.movies:
