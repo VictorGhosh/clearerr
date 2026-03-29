@@ -12,17 +12,6 @@ def jprint(input: str) -> None:
     print(json.dumps(input, indent=4))
 
 
-'''active radarr api development'''
-
-from api.radarr_api import Radarr_API
-
-r = Radarr_API()
-foo = r.get_api_query("filesystem/mediafiles")
-jprint(foo)
-
-'''end active radarr api development'''
-
-
 '''main debugging view'''
 # print("From Plex")
 # pl = Library()
@@ -36,6 +25,15 @@ jprint(foo)
 
 # print(f"Plex lib == Jellyfin lib: {(pl == jl)}")
 '''end main debugging view'''
+
+'''active storage api development'''
+from api.plex_api import *
+p = Plex_API()
+
+jprint(p.get_path('433'))
+jprint(p.get_path('708'))
+
+'''end active storage api development'''
 
 
 # Plex testing
