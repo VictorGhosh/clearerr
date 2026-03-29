@@ -93,8 +93,9 @@ class Plex_API():
     def get_path(self, rating_key: str):
         '''
         Get the path for any media. Currently much better than previous versions of this function
-        now requiring two api calls per (no recursion). Not perfect and I have not bothered to
-        make any implementation for seasons or episodes yet.
+        now requiring two api calls per (no recursion). Still not perfect because the meta data
+        is available during media object generation so media type could be passed. Really just
+        want to move on right now so not fixing it
         '''
 
         # FIXME: The main source of un-needed api calls
@@ -111,6 +112,10 @@ class Plex_API():
                 # back out twice for getting show path
                 paths.append(os.path.dirname(os.path.dirname(ep.get("Media")[0].get("Part")[0].get("file"))))
         
+        if media_type == 'season':
+            for ep in self.get_api_query('get_children', {'rating_key': metadata['ratingKey']}):
+                paths.append(os.path.dirname(ep.get("Media")[0].get("Part")[0].get("file")))
+
         # validate paths are all the same
         paths = list(set(paths))
         if len(paths) != 1:
