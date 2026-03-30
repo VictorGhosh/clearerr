@@ -27,21 +27,16 @@ class OS_Storage():
         return os.path.exists(self._full_path(path))
 
     def get_size(self, path) -> int | None:
-        '''
-        Returns the byte size below the given path from root and None if it cannot be found
-        '''
-        if path == None: 
+        if path is None:
             return None
-
         full = self._full_path(path)
-        if self.exists(path):
-            if os.path.isfile(full):
-                return os.path.getsize(full)
-            total = 0
-            for dirpath, dirnames, filenames in os.walk(full):
-                for f in filenames:
-                    total += os.path.getsize(os.path.join(dirpath, f))
-            return total
+        if not self.exists(path):
+            return None
+        return sum(
+            os.path.getsize(os.path.join(dp, f))
+            for dp, _, files in os.walk(full)
+            for f in files
+        ) if os.path.isdir(full) else os.path.getsize(full)
 
 # FIXME: Got all turned around trying to figure out if we are in base 1000 or 1024 and gave up
 def human_size(size_bytes: int) -> str | None:
