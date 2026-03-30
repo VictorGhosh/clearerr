@@ -1,6 +1,9 @@
 from obj.media_obj import *
 from api.plex_api import Plex_API
 from api.jellyfin_api import Jellyfin_API
+from api.os_storage import OS_Storage
+import logging
+log = logging.getLogger(__name__)
 
 class Library():
     def __init__(self):
@@ -12,6 +15,7 @@ class Library():
             raise ValueError(f"Media list is not empty")
 
         p = Plex_API()
+        o = OS_Storage()
 
         for lib in p.get_api_query('get_libraries')['Directory']:
             lib_type = lib['title']
@@ -36,6 +40,11 @@ class Library():
 
                             season.path = p.get_path(c.get('ratingKey'))
 
+                            try:
+                                season.size = o.get_size(season.path)
+                            except:
+                                logging.exception(f"Failed to find file size: {season.title}, {media_obj.title}")
+
                             for i in c.get('Guid'):
                                 id = i.get('id')
                                 if id.startswith('tmdb://'):
@@ -51,6 +60,12 @@ class Library():
                     media_obj.last_watched = media.get('lastViewedAt') # json var exists there is value
                     
                     media_obj.path = p.get_path(media.get('ratingKey'))
+
+                    try:
+                        media_obj.size = o.get_size(media_obj.path)
+                    except:
+                        logging.exception(f"Failed to find file size: {media_obj.title}")
+
 
                     for i in media.get('Guid'):
                         id = i.get('id')
@@ -71,6 +86,7 @@ class Library():
             raise ValueError(f"Media list is not empty")
 
         j = Jellyfin_API()
+        o = OS_Storage()
 
         for vf in j.get_api_query('VirtualFolders'):
 
@@ -87,10 +103,15 @@ class Library():
                         media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
                                          'tmdb': media.get('ProviderIds').get('Tmdb')}
                         media_obj.jellyfin_id = media.get('Id')
+
+                        try:
+                            media_obj.size = o.get_size(media.get('Path'))
+                        except:
+                            log.exception(f"Failed to find file size: {media_obj.title}")
+
                         self.movies.append(media_obj)
 
                     elif lib_type == 'Shows':
-                        
                         if media['Type'] == 'Series':
                             media_obj = Show(media['Name'])
                             media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
@@ -124,6 +145,11 @@ class Library():
                 season_obj.ids = {'tvdb': season.get('ProviderIds').get('Tvdb')}
                 season_obj.jellyfin_id = media.get('Id')
 
+                try:
+                    season_obj.size = o.get_size(season.get('Path'))
+                except:
+                    logging.exception(f"Failed to find file size: {season_obj.title}, {parent_obj.title}")
+
                 parent_obj.seasons.append(season_obj)
     
     def __str__(self):
@@ -137,10 +163,32 @@ class Library():
         return res.rstrip()
 
     def __eq__(self, other):
-        raise NotImplementedError("Must implement eq in media objects first")
-        
         if not isinstance(other, Library):
             return False
 
-        return self.movies == other.movies and self.shows == other.shows
-        
+        if len(self.movies) != len(other.movies):
+            return False
+        if len(self.shows) != len(other.shows):
+            return False
+
+        for movie in self.movies:
+            found = False
+            for other_movie in other.movies:
+                if movie == other_movie:
+                    found = True
+                    break
+            if not found:
+                log.warning(f"Failed to match: {move.title}")
+                return False
+
+        for show in self.shows:
+            found = False
+            for other_show in other.shows:
+                if show == other_show:
+                    found = True
+                    break
+            if not found:
+                log.warning(f"Failed to match: {show.title}")
+                return False
+
+        return True

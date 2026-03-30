@@ -30,6 +30,9 @@ class OS_Storage():
         '''
         Returns the byte size below the given path from root and None if it cannot be found
         '''
+        if path == None: 
+            return None
+
         full = self._full_path(path)
         if self.exists(path):
             if os.path.isfile(full):
@@ -41,8 +44,11 @@ class OS_Storage():
             return total
 
 # FIXME: Got all turned around trying to figure out if we are in base 1000 or 1024 and gave up
-def human_size(size_bytes: int) -> str:
+def human_size(size_bytes: int) -> str | None:
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size_bytes < 1024:
-            return f"{size_bytes:.2f} {unit}"
+        try:
+            if size_bytes < 1024:
+                return f"{size_bytes:.2f} {unit}"
+        except TypeError:
+            return None
         size_bytes /= 1024

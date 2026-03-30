@@ -1,8 +1,14 @@
+import os
+from api.os_storage import human_size
+import logging
+log = logging.getLogger(__name__)
+
 class _Media():
     def __init__(self, title: str):
         self.title = title
         
         self.path = None
+        self.size = None
 
         # IDs
         self.rating_key = None # Plex apps
@@ -18,29 +24,35 @@ class _Media():
             'title': self.title,
             'rating_key': self.rating_key,
             'added': self.added_on,
-            'last_watched': self.last_watched
+            'last_watched': self.last_watched,
+            'size': human_size(self.size)
         }
         partial.update(self.ids)
         partial.update({'path': self.path})
-        return str(partial)
+        return str(partial) 
     
-    '''
-    TODO: 
-    Not that simple. and not super important until I am actually using jellyfin, so implement this then
-        - Jellyfin does not seem to be scanning library on its own for updates. need to schedule 
-            that and get logic in place to run a scan when the libraries do not match (not here).
-        - Also need to put some thought into how this should work. The ID values themselves are consistant
-            but plex and jellyfin mix an match what IDs they use for each media type. You CANNOT 
-            rely on or even include titles. Capitals and spaces are not consistant (tron or TRON)
-            but more importantly for some unique titles the actual words are different!
-            (PLUR1BUS or PLURIBUS) For the latter there is no reasonable way to get consistant good
-            results that I can think of so we must work with IDs only
-    '''
-    # def __eq__(self, other):
-    #     if isinstance(other, type(self)):
-    #         return self.title == other.title
-    #     else:
-    #         return false
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        # Only end of paths can match because of the containers root naming. oops
+        if self.path and other.path:
+            tail_a = '/'.join(self.path.split('/')[-2:])
+            tail_b = '/'.join(other.path.split('/')[-2:])
+            if tail_a != tail_b:
+                return False
+
+        # At least one id matches (not none) and none of the filled ids do not match
+        match = False
+        for key in self.ids.keys() & other.ids.keys():
+            a = self.ids.get(key)
+            b = other.ids.get(key)
+            if a is not None and b is not None:
+                if a != b:
+                    return False
+                match = True
+
+        return match
 
 class Movie(_Media):
     def __init__(self, title: str):
@@ -65,3 +77,23 @@ class Show(_Media):
             seasons_str += f"\n\t{s}"
             
         return f"{partial} - Seasons:{seasons_str}"
+
+    def __eq__(self, other):
+        if not super().__eq__(other):
+            return False
+
+        if len(self.seasons) != len(other.seasons):
+            log.warning(f"Mismatched number of seasons: {self.title}")
+            return False
+
+        # each season must have equal match
+        for season_a in self.seasons:
+            found = False
+            for season_b in other.seasons:
+                if season_a == season_b:
+                    found = True
+                    break
+            if not found:
+                log.warning(f"Failed to match season: {season_a.title}, {self.title}")
+                return False
+        return True

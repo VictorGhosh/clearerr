@@ -1,5 +1,4 @@
-# Start imports and enviroment
-
+'''Begin setup and imports'''
 import sys
 import os
 import logging
@@ -25,28 +24,28 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 log = logging.getLogger(__name__)
-
-# End imports and enviroment
+'''End setup and imports'''
 
 log.info("Required pyhton libraries loaded")
 log.info("Starting main execution...")
 
-# Build from plex
 log.info("Building library object from Plex...")
 pl = Library()
 pl.build_from_plex()
 log.info("Completed building from Plex")
 log.debug(pl)
 
-# Build from jellyfin
 log.info('Building library object from Jellyfin')
 jl = Library()
 jl.build_from_jellyfin()
 log.info("Completed building from Jellyfin")
 log.debug(jl)
 
-# TODO: Validate the two libraries
-# print(f"Plex lib == Jellyfin lib: {(pl == jl)}")
+# Validate libraries
+if pl == jl:
+    log.info("Library model validated successfully")
+else:
+    log.error("Library models are not equivalent")
 
 
 
@@ -57,16 +56,16 @@ log.debug(jl)
 def jprint(input: str) -> None:
     print(json.dumps(input, indent=4))
 
-from api.os_storage import *
-o = OS_Storage()
+# from api.os_storage import *
+# o = OS_Storage()
 
-print(o.exists("/data/media/movies/Fantastic Mr. Fox (2009)/Fantastic Mr. Fox (2009) Bluray-1080p.mp4"))
-size = o.get_size("/data/media/movies/Fantastic Mr. Fox (2009)/Fantastic Mr. Fox (2009) Bluray-1080p.mp4")
-print(human_size(size))
+# print(o.exists("/data/media/movies/Fantastic Mr. Fox (2009)/Fantastic Mr. Fox (2009) Bluray-1080p.mp4"))
+# size = o.get_size("/data/media/movies/Fantastic Mr. Fox (2009)/Fantastic Mr. Fox (2009) Bluray-1080p.mp4")
+# print(human_size(size))
 
-print(o.exists("/data/media/tv/It's Always Sunny in Philadelphia (2005) {tvdb-75805}"))
-size = o.get_size("/data/media/tv/It's Always Sunny in Philadelphia (2005) {tvdb-75805}")
-print(human_size(size))
+# print(o.exists("/data/media/tv/It's Always Sunny in Philadelphia (2005) {tvdb-75805}"))
+# size = o.get_size("/data/media/tv/It's Always Sunny in Philadelphia (2005) {tvdb-75805}")
+# print(human_size(size))
 
 '''end active development'''
 
