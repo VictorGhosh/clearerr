@@ -1,12 +1,15 @@
 #!/bin/bash
 
-# log timestamp
-echo "$(date): Running cleararr script" >> /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.log
+LOG=/boot/config/plugins/user.scripts/scripts/clearerr/clearerr.log
 
-# import enviroment for python to access vars
+log_trace() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [TRACE] (bash) $1" >> "$LOG"
+}
+
+log_trace "Entering cleararr python program"
+
 source /boot/config/plugins/user.scripts/scripts/clearerr/.env
 
-# run Python script
-python3 /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.py >> /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.log 2>&1
+python3 /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.py >> "$LOG" 2>&1
 
-echo "$(date): Completed cleararr script" >> /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.log
+log_trace "Exited cleararr python program"

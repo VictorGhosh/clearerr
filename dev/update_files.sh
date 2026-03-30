@@ -13,6 +13,7 @@ TARGETS=(
   "clearerr.py"
   "requirements.txt"
   # "name"
+  "rules.yaml"
   "script"
   ".env"
 )

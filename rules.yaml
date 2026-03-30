@@ -1,0 +1,23 @@
+goal:
+  # IMPORTANT: At the moment this is percentage of the share to leave empty of media. This 
+  # has no impact on other files or the file system itself
+  free_percentage: 90
+  dry_run: true
+
+constraints:
+  protected_tag: exempt
+  min_age_days: 30
+
+ordering:
+  - field: added
+    direction: desc
+  - field: size_gb
+    direction: desc
+  - field: last_watched
+    direction: desc
+
+thresholds:
+  skip_if_smaller_than_gb: 1
+  notify_if_larger_than_gb: 20
+  notify_if_lib_size_dif_larger_than_gb: 300
+  notify_if_target_free_space_below_gb: 500

@@ -1,6 +1,8 @@
 import os
 import requests
 import json
+import logging
+log = logging.getLogger(__name__)
 
 PLEX_IP     = os.environ.get("PLEX_IP")
 PLEX_TOKEN  = os.environ.get("PLEX_TOKEN")
@@ -26,7 +28,7 @@ class Plex_API():
             resp.raise_for_status()
 
         except requests.exceptions.RequestException as e:
-            print(f"Error making Plex API request: {e}")
+            log.error(f"Error making Plex API request: {e}")
             return None
         
         # json parsing and structure related errors
@@ -35,7 +37,7 @@ class Plex_API():
             return data.get('MediaContainer', data)
         
         except json.JSONDecodeError:
-            print("Invalid JSON returned from Plex.")
+            log.error("Invalid JSON returned from Plex.")
             return None
 
     def get_api_query(self, query, params={}) -> json:
@@ -78,7 +80,6 @@ class Plex_API():
                 endpoint = f"/library/metadata/{params['rating_key']}/children"
                 return self._get_resp(endpoint, params=payload).get('Metadata', [])
             
-            # TODO: Implement this in Plex_API().get_path() see fixme there
             # All episodes of a show, requires params={'rating_key': x} the seires rating key
             case 'get_leaves':
                 payload = {
@@ -89,44 +90,38 @@ class Plex_API():
                 return self._get_resp(endpoint, params=payload).get('Metadata', [])
 
             case catchall:
+                log.exception(f"Unknown api query: {catchall}")
                 raise ValueError(f"Unknown api query: {catchall}")
     
-    # FIXME: This code sucks, cool that its recursive takes but way too many api calls. I did not know
-    # about the "allLeaves" enpoiint when I wrote it but using that we can get this down to a single 
-    # api call per series. 
     def get_path(self, rating_key: str):
         '''
-        Get the path for any media. Path for shows and seasons is recursively validated for 
-        all children because I do not trust plex.
-
-        Previously I wrote logic to avoid repeat api calls for meta data when not neeeded. This
-        would make it much more efficent but the code was more coplicated then I think its worth
-        in terms of maintainability. This method should only be used when needed i.e. not for all
-        media objects
+        Get the path for any media. Currently much better than previous versions of this function
+        now requiring two api calls per (no recursion). Still not perfect because the meta data
+        is available during media object generation so media type could be passed. Really just
+        want to move on right now so not fixing it
         '''
-        # The main source of un-needed api calls
+
+        # FIXME: The main source of un-needed api calls
         metadata = self.get_api_query('get_metadata', {'rating_key': rating_key})['Metadata'][0]
         media_type = metadata['type']
         
         if media_type == 'movie':
             return metadata['Media'][0]['Part'][0]['file']
 
-        if media_type == 'episode':
-            return os.path.dirname(metadata['Media'][0]['Part'][0]['file'])
-
-        # seasons and shows recursively find path of children then validate all match
         paths = []
 
-        if media_type == 'season':
-            for episode in self.get_api_query('get_children', {'rating_key': metadata['ratingKey']}):
-                paths.append(self.get_path(episode['ratingKey']))
-
         if media_type == 'show':
-            for season in self.get_api_query('get_children', {'rating_key': metadata['ratingKey']}):
-                paths.append(os.path.dirname(self.get_path(season['ratingKey'])))
+            for ep in self.get_api_query('get_leaves', {'rating_key': metadata['ratingKey']}):
+                # back out twice for getting show path
+                paths.append(os.path.dirname(os.path.dirname(ep.get("Media")[0].get("Part")[0].get("file"))))
         
+        if media_type == 'season':
+            for ep in self.get_api_query('get_children', {'rating_key': metadata['ratingKey']}):
+                paths.append(os.path.dirname(ep.get("Media")[0].get("Part")[0].get("file")))
+
         # validate paths are all the same
         paths = list(set(paths))
         if len(paths) != 1:
+            log.exception(f"Bad path parsing found: {paths}")
             raise ValueError(f"Bad path parsing found: {paths}")
         return paths[0]

@@ -1,6 +1,8 @@
 import os
 import requests
 import json
+import logging
+log = logging.getLogger(__name__)
 
 JELLYFIN_IP = os.environ.get("JELLYFIN_IP")
 JELLYFIN_KEY = os.environ.get("JELLYFIN_KEY")
@@ -25,7 +27,7 @@ class Jellyfin_API:
             resp.raise_for_status()
             return resp.json()
         except requests.exceptions.RequestException as e:
-            print(f"Error making Jellyfin API request: {e}")
+            log.error(f"Error making Jellyfin API request: {e}")
             return None
 
     def get_api_query(self, query, params={}) -> json:
@@ -63,3 +65,7 @@ class Jellyfin_API:
             # items in user playlist, requires {'playlist_id': x, 'user_id': y}
             case 'playlist/items':
                 return self._get_resp(f"/Playlists/{params['playlist_id']}/Items", params={"UserId": params['user_id']})
+
+            case catchall:
+                log.exception(f"Unknown api query: {catchall}")
+                raise ValueError(f"Unknown api query: {catchall}")
