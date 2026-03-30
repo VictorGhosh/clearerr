@@ -1,8 +1,13 @@
 # .env
-export DEBUG=1 # 1 for debug output 2 for prod
+
+# Use INFO for prod or DEBUG for debug
+export LOG_LEVEL=INFO
 
 export UNRAID_IP="" # Only in use for the dev update_files script
 
+export LIBRARY_ROOT="/mnt/user/"
+
+# raw plex token not duplicate
 export PLEX_IP=""
 export PLEX_TOKEN=""
 
@@ -11,7 +16,7 @@ export TAUTULLI_KEY=""
 
 export JELLYFIN_IP=""
 export JELLYFIN_KEY=""
-export JELLYFIN_LIST_NAME="" # The name to look for when looking for playlist
+export JELLYFIN_LIST_NAME="Removal Exempt" # The name to look for when looking for playlist
 
 export RADARR_IP=""
 export RADARR_KEY=""

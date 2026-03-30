@@ -34,6 +34,8 @@ class Library():
                             season.added_on = c.get('addedAt')
                             season.last_watched = c.get('lastViewedAt')
 
+                            season.path = p.get_path(c.get('ratingKey'))
+
                             for i in c.get('Guid'):
                                 id = i.get('id')
                                 if id.startswith('tmdb://'):
@@ -47,6 +49,8 @@ class Library():
                     media_obj.rating_key = media.get('ratingKey')
                     media_obj.added_on = media.get('addedAt')
                     media_obj.last_watched = media.get('lastViewedAt') # json var exists there is value
+                    
+                    media_obj.path = p.get_path(media.get('ratingKey'))
 
                     for i in media.get('Guid'):
                         id = i.get('id')
@@ -86,8 +90,6 @@ class Library():
                         self.movies.append(media_obj)
 
                     elif lib_type == 'Shows':
-
-                        # jprint(media)
                         
                         if media['Type'] == 'Series':
                             media_obj = Show(media['Name'])
@@ -132,7 +134,7 @@ class Library():
         res += f'Shows ({len(self.shows)} total):\n'
         for s in self.shows:
             res += f'{str(s)}\n'
-        return res
+        return res.rstrip()
 
     def __eq__(self, other):
         raise NotImplementedError("Must implement eq in media objects first")

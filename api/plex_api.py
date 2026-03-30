@@ -1,6 +1,8 @@
 import os
 import requests
 import json
+import logging
+log = logging.getLogger(__name__)
 
 PLEX_IP     = os.environ.get("PLEX_IP")
 PLEX_TOKEN  = os.environ.get("PLEX_TOKEN")
@@ -26,7 +28,7 @@ class Plex_API():
             resp.raise_for_status()
 
         except requests.exceptions.RequestException as e:
-            print(f"Error making Plex API request: {e}")
+            log.error(f"Error making Plex API request: {e}")
             return None
         
         # json parsing and structure related errors
@@ -35,7 +37,7 @@ class Plex_API():
             return data.get('MediaContainer', data)
         
         except json.JSONDecodeError:
-            print("Invalid JSON returned from Plex.")
+            log.error("Invalid JSON returned from Plex.")
             return None
 
     def get_api_query(self, query, params={}) -> json:
@@ -88,6 +90,7 @@ class Plex_API():
                 return self._get_resp(endpoint, params=payload).get('Metadata', [])
 
             case catchall:
+                log.exception(f"Unknown api query: {catchall}")
                 raise ValueError(f"Unknown api query: {catchall}")
     
     def get_path(self, rating_key: str):
@@ -119,5 +122,6 @@ class Plex_API():
         # validate paths are all the same
         paths = list(set(paths))
         if len(paths) != 1:
+            log.exception(f"Bad path parsing found: {paths}")
             raise ValueError(f"Bad path parsing found: {paths}")
         return paths[0]

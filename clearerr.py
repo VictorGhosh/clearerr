@@ -1,6 +1,10 @@
-# Add lib directory to path don't lose imports (maintine order of imports)
+# Start imports and enviroment
+
 import sys
 import os
+import logging
+
+# Add lib directory to path don't lose imports (maintine order of imports)
 lib_path = os.path.join(os.path.dirname(__file__), 'lib')
 if lib_path not in sys.path:
     sys.path.insert(0, lib_path)
@@ -8,33 +12,63 @@ if lib_path not in sys.path:
 import json
 from obj.library_obj import Library
 
+# Logging setup
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+
+# Shush requests http connection noises
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+
+log = logging.getLogger(__name__)
+
+# End imports and enviroment
+
+log.info("Required pyhton libraries loaded")
+log.info("Starting main execution...")
+
+# Build from plex
+log.info("Building library object from Plex...")
+pl = Library()
+pl.build_from_plex()
+log.info("Completed building from Plex")
+log.debug(pl)
+
+# Build from jellyfin
+log.info('Building library object from Jellyfin')
+jl = Library()
+jl.build_from_jellyfin()
+log.info("Completed building from Jellyfin")
+log.debug(jl)
+
+# TODO: Validate the two libraries
+# print(f"Plex lib == Jellyfin lib: {(pl == jl)}")
+
+
+
+
+
+'''active development'''
+
 def jprint(input: str) -> None:
     print(json.dumps(input, indent=4))
 
+from api.os_storage import *
+o = OS_Storage()
 
-'''main debugging view'''
-# print("From Plex")
-# pl = Library()
-# pl.build_from_plex()
-# print(pl)
+print(o.exists("/data/media/movies/Fantastic Mr. Fox (2009)/Fantastic Mr. Fox (2009) Bluray-1080p.mp4"))
+size = o.get_size("/data/media/movies/Fantastic Mr. Fox (2009)/Fantastic Mr. Fox (2009) Bluray-1080p.mp4")
+print(human_size(size))
 
-# print('From Jellyfin')
-# jl = Library()
-# jl.build_from_jellyfin()
-# print(jl)
+print(o.exists("/data/media/tv/It's Always Sunny in Philadelphia (2005) {tvdb-75805}"))
+size = o.get_size("/data/media/tv/It's Always Sunny in Philadelphia (2005) {tvdb-75805}")
+print(human_size(size))
 
-# print(f"Plex lib == Jellyfin lib: {(pl == jl)}")
-'''end main debugging view'''
-
-'''active storage api development'''
-from api.plex_api import *
-p = Plex_API()
-
-jprint(p.get_path('433'))
-jprint(p.get_path('708'))
-jprint(p.get_path('915'))
-
-'''end active storage api development'''
+'''end active development'''
 
 
 # Plex testing
@@ -61,3 +95,4 @@ jprint(p.get_path('915'))
 #     for list in j.get_api_query('user/items', {'user_id': usr['Id']})['Items']:
 #         jprint(j.get_api_query('playlist/items', {'playlist_id': list['Id'], 'user_id': usr['Id']}))
 
+log.info("Completed python program")

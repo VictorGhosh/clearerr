@@ -2,7 +2,7 @@ class _Media():
     def __init__(self, title: str):
         self.title = title
         
-        self._path = None
+        self.path = None
 
         # IDs
         self.rating_key = None # Plex apps
@@ -13,14 +13,6 @@ class _Media():
         self.added_on = None
         self.last_watched = None
 
-    @property
-    def path(self):
-        return self._path
-    
-    @path.setter
-    def path(self, path: str) -> None:
-        self._path = path
-
     def __str__(self):
         partial = {
             'title': self.title,
@@ -29,6 +21,7 @@ class _Media():
             'last_watched': self.last_watched
         }
         partial.update(self.ids)
+        partial.update({'path': self.path})
         return str(partial)
     
     '''
