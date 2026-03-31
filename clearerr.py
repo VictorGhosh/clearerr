@@ -13,7 +13,6 @@ if lib_path not in sys.path:
 
 # These must come after because they are pulled from lib folder
 from obj.library_obj import Library
-import json
 import yaml
 
 # Logging setup
@@ -34,7 +33,16 @@ log.info("Required pyhton libraries loaded")
 
 
 def main():
-    # region pull rule variables # config.goal.free_gb or config.ordering[0].field
+    """Main program execution. region comment break this into sections
+        1. Pull variables/settings from the rules file
+        2. Build Plex and Jellyin library objects. 
+            - Validate the libray objects with eachother and update Plex watch data using Tautulli
+        3. Get library storage sizes using os walk
+            - Get share/array size and usage using shutil
+            - Validate and set target storage amount to clear
+        4. NOT IMPLEMENTED
+    """
+    # region 1. pull rule variables # config.goal.free_gb or config.ordering[0].field
     def to_namespace(d):
         if isinstance(d, dict):
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
@@ -48,7 +56,7 @@ def main():
     # endregion
 
 
-    # region library building
+    # region 2. library building
     log.info("Building library object from Plex...")
     pl = Library()
     pl.build_from_plex()
@@ -61,17 +69,20 @@ def main():
     log.info("Completed building from Jellyfin")
     log.debug(jl)
 
-    # Validate libraries
+    # Validate and update libraries
     if pl == jl:
         log.info("Library model validated successfully")
     else:
         log.error("Library models are not equivalent")
         log.error("No continuation plan has been implemented yet for failed validation. Exiting")
         raise ValueError
+
+    log.info("Updating Plex library model watch stats with Tautulli")
+    pl.update_from_tautulli()
+    log.debug(pl)
     # endregion
 
-
-    # region check storage # This should be first but I want to keep testing library building
+    # region 3 check storage # This should be first but I want to keep testing library building
     o = OS_Storage()
     
     # get library sizes from os
@@ -109,8 +120,30 @@ def main():
     if clear_target <= 0:
         log.error("Something has gone very wrong, we aim to clear negative space")
         raise ValueError
-    log.info(f"Clearing approximately {human_size(clear_target)}s of media")
+    log.info(f"Attempting to clear approximately {human_size(clear_target)}s of media")
     # endregion
+
+
+    # XXX: Below has been put on hold because I am an idiot and forgot to include tautullli for
+    # accurate last_watched stats.
+
+    # region media selection
+    # FIXME: this should probebly live in media_obj
+    # def deletion_score(item):
+    #     today = time.time()
+    #     days_old = (today - item.added_on) / 86400
+    #     days_since_watched = (today - item.last_watched) / 86400 if item.last_watched else 0
+    #     return days_old + (days_since_watched * 0.2)
+
+    # combined_lib = pl.movies + pl.shows
+    # combined_lib.sort(key=deletion_score, reverse=True)
+    
+    # combined_lib_str = f'Media ({len(combined_lib)} total):\n'
+    # for m in combined_lib:
+    #     combined_lib_str += f'{str(m)}\n'
+
+    # log.debug(f"Sorted library: {combined_lib_str}")
+    # # endregion
 
     # region helper
     # def jprint(input: str) -> None:

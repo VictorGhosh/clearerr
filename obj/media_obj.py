@@ -12,7 +12,7 @@ class _Media():
 
         # IDs
         self.rating_key = None # Plex apps
-        self.jellyfin_id = None # Jellyfin apps
+        self.jellyfin_id = None # Jellyfin apps FIXME: is this in use? I don't remember what it is
         self.ids = {} # at least tmdb and tvdb
 
         # watch data
@@ -29,7 +29,7 @@ class _Media():
         }
         partial.update(self.ids)
         partial.update({'path': self.path})
-        return str(partial) 
+        return str(partial)
     
     def __eq__(self, other):
         if not isinstance(other, type(self)):
