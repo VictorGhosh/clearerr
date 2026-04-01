@@ -13,7 +13,6 @@ if lib_path not in sys.path:
 
 # These must come after because they are pulled from lib folder
 from obj.library_obj import Library
-import json
 import yaml
 
 # Logging setup
@@ -34,7 +33,17 @@ log.info("Required pyhton libraries loaded")
 
 
 def main():
-    # region pull rule variables # config.goal.free_gb or config.ordering[0].field
+    """Main program execution. region comment break this into sections
+        1. Pull variables/settings from the rules file
+        2. Build Plex and Jellyin library objects. 
+            - Validate the libray objects with eachother 
+            - Update Plex watch data using Tautulli
+        3. Get library storage sizes using os walk
+            - Get share/array size and usage using shutil
+            - Validate and set target storage amount to clear
+        4. NOT IMPLEMENTED
+    """
+    # region 1. pull rule variables # config.goal.free_gb or config.ordering[0].field
     def to_namespace(d):
         if isinstance(d, dict):
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
@@ -47,31 +56,34 @@ def main():
         config = to_namespace(yaml.safe_load(f))
     # endregion
 
-
-    # region library building
+    # region 2. library building
     log.info("Building library object from Plex...")
     pl = Library()
     pl.build_from_plex()
     log.info("Completed building from Plex")
     log.debug(pl)
 
-    log.info('Building library object from Jellyfin')
+    log.info('Building library object from Jellyfin...')
     jl = Library()
     jl.build_from_jellyfin()
     log.info("Completed building from Jellyfin")
     log.debug(jl)
 
-    # Validate libraries
+    # Validate and update libraries
     if pl == jl:
         log.info("Library model validated successfully")
     else:
         log.error("Library models are not equivalent")
         log.error("No continuation plan has been implemented yet for failed validation. Exiting")
         raise ValueError
+
+    log.info("Updating Plex library watch stats using Tautulli. Expect warnings if Plex was watched without Tautulli running...")
+    pl.update_from_tautulli()
+    log.debug(pl)
+    log.info("Completed Tautulli to Plex library data update")
     # endregion
 
-
-    # region check storage # This should be first but I want to keep testing library building
+    # region 3 check storage # This should be first but I want to keep testing library building
     o = OS_Storage()
     
     # get library sizes from os
@@ -109,14 +121,35 @@ def main():
     if clear_target <= 0:
         log.error("Something has gone very wrong, we aim to clear negative space")
         raise ValueError
-    log.info(f"Clearing approximately {human_size(clear_target)}s of media")
+    log.info(f"Attempting to clear approximately {human_size(clear_target)}s of media")
     # endregion
 
-    # region helper
-    # def jprint(input: str) -> None:
-    #     print(json.dumps(input, indent=4))
-    # endregion
+    log.info("Calculating deletion scores")
+    deletion_scoring_rules = config.ordering
+
+    log.info(deletion_scoring_rules)
+
+    for movie in pl.movies:
+        movie.set_deletion_score(deletion_scoring_rules)
+    for show in pl.shows:
+        show.set_deletion_score(deletion_scoring_rules)
+        # NOTE: At the moment I am treating shows as a unit but could easily go by season only edit here down
+        # for season in show.seasons:
+            # season.set_deletion_score()
+
+    combined_lib = pl.movies + pl.shows
+    combined_lib.sort(key=lambda x: x.deletion_score, reverse=False)
+
+    combined_lib_str = f'Media ({len(combined_lib)} total):\n'
+    for m in combined_lib:
+        combined_lib_str += f'{str(m)}\n'
+
+    log.info(f"Sorted library: {combined_lib_str}")
+    
+    # TODO SHOWS ADDED_ON DATE SHOULD PROBEBLY BE THE MOST RECENT ADDED SEASON TODO
 
 
 if __name__ == "__main__":
     main()
+    # def jprint(input: str) -> None:
+    #     print(json.dumps(input, indent=4))

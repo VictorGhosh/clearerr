@@ -1,6 +1,7 @@
 from obj.media_obj import *
 from api.plex_api import Plex_API
 from api.jellyfin_api import Jellyfin_API
+from api.tautulli_api import Tautulli_API
 from api.os_storage import OS_Storage
 import logging
 log = logging.getLogger(__name__)
@@ -9,6 +10,47 @@ class Library():
     def __init__(self):
         self.movies = []
         self.shows = []
+
+    def __str__(self):
+        res = f'Movies ({len(self.movies)} total):\n'
+        for m in self.movies:
+            res += f'{str(m)}\n'
+
+        res += f'Shows ({len(self.shows)} total):\n'
+        for s in self.shows:
+            res += f'{str(s)}\n'
+        return res.rstrip()
+
+    def __eq__(self, other):
+        if not isinstance(other, Library):
+            return False
+
+        if len(self.movies) != len(other.movies):
+            return False
+        if len(self.shows) != len(other.shows):
+            return False
+
+        for movie in self.movies:
+            found = False
+            for other_movie in other.movies:
+                if movie == other_movie:
+                    found = True
+                    break
+            if not found:
+                log.warning(f"Failed to match: {move.title}")
+                return False
+
+        for show in self.shows:
+            found = False
+            for other_show in other.shows:
+                if show == other_show:
+                    found = True
+                    break
+            if not found:
+                log.warning(f"Failed to match: {show.title}")
+                return False
+
+        return True
 
     def build_from_plex(self) -> None:
         if self.movies != [] or self.shows != []:
@@ -32,7 +74,6 @@ class Library():
 
                         for c in p.get_api_query('get_children', {'rating_key': media['ratingKey']}):
                             season = Season(c['title'])
-                            # TODO: set path when its better (see method fixme)
 
                             season.rating_key = c.get('ratingKey')
                             season.added_on = c.get('addedAt')
@@ -151,44 +192,34 @@ class Library():
                     logging.exception(f"Failed to find file size: {season_obj.title}, {parent_obj.title}")
 
                 parent_obj.seasons.append(season_obj)
-    
-    def __str__(self):
-        res = f'Movies ({len(self.movies)} total):\n'
-        for m in self.movies:
-            res += f'{str(m)}\n'
 
-        res += f'Shows ({len(self.shows)} total):\n'
-        for s in self.shows:
-            res += f'{str(s)}\n'
-        return res.rstrip()
+    def update_from_tautulli(self) -> None:
+        t = Tautulli_API()
+        
+        def update_from_tautulli_helper(media, t_dat) -> None:
+            try:
+                t_last_watched = t_dat['data'][0]['date']
+            except IndexError:
+                # tautulli has not record, validate plex agrees otherwise there is a problem
+                if media.last_watched is not None:
+                    log.warning(f"Plex has a watch date but Tautulli does not: {media.title}")
+                return
 
-    def __eq__(self, other):
-        if not isinstance(other, Library):
-            return False
-
-        if len(self.movies) != len(other.movies):
-            return False
-        if len(self.shows) != len(other.shows):
-            return False
+            if media.last_watched is None or t_last_watched > media.last_watched:
+                media.last_watched = t_last_watched
+            elif t_last_watched < media.last_watched:
+                log.warning(f"Plex has a newer watch date than Tautulli: {media.title}")
 
         for movie in self.movies:
-            found = False
-            for other_movie in other.movies:
-                if movie == other_movie:
-                    found = True
-                    break
-            if not found:
-                log.warning(f"Failed to match: {move.title}")
-                return False
+            t_dat = t.get_api_query('get_history', {'rating_key': movie.rating_key})
+            update_from_tautulli_helper(movie, t_dat)
+            
 
+        # FIXME: For SHOW IS NOT WORKING RIGHT NOW
         for show in self.shows:
-            found = False
-            for other_show in other.shows:
-                if show == other_show:
-                    found = True
-                    break
-            if not found:
-                log.warning(f"Failed to match: {show.title}")
-                return False
-
-        return True
+            t_show_dat = t.get_api_query('get_history', {'grandparent_rating_key': show.rating_key})
+            update_from_tautulli_helper(show, t_show_dat)
+             
+            for season in show.seasons:
+                t_season_dat = t.get_api_query('get_history', {'parent_rating_key': season.rating_key})
+                update_from_tautulli_helper(season, t_season_dat)

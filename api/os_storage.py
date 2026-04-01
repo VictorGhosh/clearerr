@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 import logging
 log = logging.getLogger(__name__)
 
@@ -11,22 +10,35 @@ class OS_Storage():
         self.root = root
 
     def _full_path(self, path) -> str:
-        '''
-        Join path with root and validate that join did its job. Annoyingly join seems to silenty
+        """Join path with root and validate that join did its job. Annoyingly join seems to silenty
         do nothing if there is a repeat like traiing / or root at the start if path
-        '''
+
+        Args:
+            path (_type_): _description_
+
+        Returns:
+            str: _description_
+        """
         full = os.path.join(self.root, path.lstrip('/'))
         if full == path or full == self.root:
             log.error(f"Join had no effect: {full}")
         return full
 
     def exists(self, path) -> bool:
-        '''
-        Returns if the given path from root is valid
-        '''
+        """Returns if the given path from root is valid
+        """
         return os.path.exists(self._full_path(path))
 
     def get_size(self, path) -> int | None:
+        """Get the apprent size of a a directory by walking below it. Seems to leave 
+        a substantial amount of overhead out of the returned value
+
+        Args:
+            path (_type_): _description_
+
+        Returns:
+            int | None: Bytes or None if not found.
+        """
         if path is None:
             return None
         full = self._full_path(path)
@@ -38,7 +50,6 @@ class OS_Storage():
             for f in files
         ) if os.path.isdir(full) else os.path.getsize(full)
 
-# FIXME: Got all turned around trying to figure out if we are in base 1000 or 1024 and gave up
 def human_size(size_bytes: int) -> str | None:
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         try:

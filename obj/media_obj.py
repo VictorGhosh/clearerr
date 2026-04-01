@@ -1,4 +1,5 @@
 import os
+import time
 from api.os_storage import human_size
 import logging
 log = logging.getLogger(__name__)
@@ -12,12 +13,14 @@ class _Media():
 
         # IDs
         self.rating_key = None # Plex apps
-        self.jellyfin_id = None # Jellyfin apps
         self.ids = {} # at least tmdb and tvdb
 
         # watch data
         self.added_on = None
         self.last_watched = None
+
+        # use setter. scaled score or -1 for exempt
+        self.deletion_score = None
 
     def __str__(self):
         partial = {
@@ -25,11 +28,12 @@ class _Media():
             'rating_key': self.rating_key,
             'added': self.added_on,
             'last_watched': self.last_watched,
-            'size': human_size(self.size)
+            'size': human_size(self.size),
+            'deletion_score': self.deletion_score
         }
         partial.update(self.ids)
         partial.update({'path': self.path})
-        return str(partial) 
+        return str(partial)
     
     def __eq__(self, other):
         if not isinstance(other, type(self)):
@@ -53,6 +57,23 @@ class _Media():
                 match = True
 
         return match
+
+    def set_deletion_score(self, ordering: list, removal_exempt: bool=False) -> None:
+        if removal_exempt:
+            self.deletion_score = -1
+            return
+        score = 0
+        for item in ordering:
+            field, weight, required = item['field'], item['weight'], item['required']
+            value = getattr(self, field, None)
+            if not value:
+                if required:
+                    log.exception(f"Ordering field '{field}' is missing or None on: {self.title}")
+                    raise ValueError
+                continue
+            score += value * weight
+        self.deletion_score = score
+
 
 class Movie(_Media):
     def __init__(self, title: str):

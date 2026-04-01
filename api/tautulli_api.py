@@ -1,6 +1,8 @@
 import os
 import requests
 import json
+import logging
+log = logging.getLogger(__name__)
 
 TAUTULLI_IP = os.environ.get("TAUTULLI_IP")
 TAUTULLI_KEY = os.environ.get("TAUTULLI_KEY")
@@ -35,10 +37,10 @@ class Tautulli_API:
             resp.raise_for_status()
         
         except requests.exceptions.Timeout:
-            print("Error making API request: Request timed out.")
+            log.error("Error making API request: Request timed out.")
             return None
         except requests.exceptions.RequestException as e:
-            print(f"Error making Tautulli API request: {e}")
+            log.error(f"Error making Tautulli API request: {e}")
             return None
         
         # json parsing and structure related errors
@@ -49,12 +51,12 @@ class Tautulli_API:
             return data['response']['data']        
         
         except json.JSONDecodeError as e:
-            print(f"Invalid JSON returned: {e}")
-            print(f"Raw response: {resp.text[:500]}...")
+            log.error(f"Invalid JSON returned: {e}")
+            log.error(f"Raw response: {resp.text[:500]}...")
             return None
         except KeyError as e:
-            print(f"Tautulli response structure error (missing key: {e}).")
-            print(f"Raw data: {data}")
+            log.error(f"Tautulli response structure error (missing key: {e}).")
+            log.error(f"Raw data: {data}")
             return None
 
     def get_api_query(self, query, params={}) -> json:
@@ -81,7 +83,14 @@ class Tautulli_API:
             # Not actually metadata but children basic. requires params={'rating_key': 'x'} where x is parent rating key
             case 'get_children_metadata':
                 params.update({'cmd': 'get_children_metadata', 'children_content_details': 1})
-                return self._get_resp(patams=params)
+                return self._get_resp(params=params)
+            
+            # The only thing that works for watch data in the hell that is plex apis
+            # The param needs to target what is watched so, to for show give show rating key as
+            # 'grandparent_rating_key', season use 'parent_rating_key' and movie/episode use 'rating_key''  
+            case 'get_history':
+                params.update({'cmd': 'get_history', 'length': 1, 'order_column': 'date', 'order_dir': 'desc'})
+                return self._get_resp(params=params)
 
             case catchall:
                 raise ValueError(f"Unknown api query: {catchall}")

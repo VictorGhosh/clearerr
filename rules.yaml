@@ -1,23 +1,28 @@
+# Rules should only be referenced in clearerr.py for simplicity 
+
 goal:
   # IMPORTANT: At the moment this is percentage of the share to leave empty of media. This 
   # has no impact on other files or the file system itself
   free_percentage: 90
   dry_run: true
 
-constraints:
-  protected_tag: exempt
-  min_age_days: 30
+# constraints:
+  # protected_tag: exempt
+  # min_age_days: 30
 
+# Each field must be an attribute of the media and will be multiplied by its weight and summed
+# A higher score means more likely to be remved
+# 'required' attributes will throw exception if left unset durring scoring
 ordering:
-  - field: added
-    direction: desc
-  - field: size_gb
-    direction: desc
+  - field: added_on
+    weight: 1.0
+    required: true
   - field: last_watched
-    direction: desc
+    weight: 0.7
+    required: false
 
 thresholds:
-  skip_if_smaller_than_gb: 1
-  notify_if_larger_than_gb: 20
+  # skip_if_smaller_than_gb: 1
+  # notify_if_larger_than_gb: 20
   notify_if_lib_size_dif_larger_than_gb: 300
   notify_if_target_free_space_below_gb: 500
