@@ -195,20 +195,31 @@ class Library():
 
     def update_from_tautulli(self) -> None:
         t = Tautulli_API()
-
-        for movie in self.movies:
-            t_dat = t.get_api_query('get_history', {'rating_key': movie.rating_key})
-
+        
+        def update_from_tautulli_helper(media, t_dat) -> None:
             try:
                 t_last_watched = t_dat['data'][0]['date']
             except IndexError:
                 # tautulli has not record, validate plex agrees otherwise there is a problem
-                if movie.last_watched is not None:
-                    log.warning(f"Plex has a watch date but Tautulli does not: {movie.title}")
-                else: 
-                    continue
+                if media.last_watched is not None:
+                    log.warning(f"Plex has a watch date but Tautulli does not: {media.title}")
+                return
 
-            if movie.last_watched is None or t_last_watched > movie.last_watched:
-                movie.last_watched = t_last_watched
-            elif t_last_watched < movie.last_watched:
-                log.warning(f"Plex has a newer watch date than Tautulli: {movie.title}")
+            if media.last_watched is None or t_last_watched > media.last_watched:
+                media.last_watched = t_last_watched
+            elif t_last_watched < media.last_watched:
+                log.warning(f"Plex has a newer watch date than Tautulli: {media.title}")
+
+        for movie in self.movies:
+            t_dat = t.get_api_query('get_history', {'rating_key': movie.rating_key})
+            update_from_tautulli_helper(movie, t_dat)
+            
+
+        # FIXME: For SHOW IS NOT WORKING RIGHT NOW
+        for show in self.shows:
+            t_show_dat = t.get_api_query('get_history', {'grandparent_rating_key': show.rating_key})
+            update_from_tautulli_helper(show, t_show_dat)
+             
+            for season in show.seasons:
+                t_season_dat = t.get_api_query('get_history', {'parent_rating_key': season.rating_key})
+                update_from_tautulli_helper(season, t_season_dat)

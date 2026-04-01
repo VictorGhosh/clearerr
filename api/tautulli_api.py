@@ -87,7 +87,7 @@ class Tautulli_API:
             
             # The only thing that works for watch data in the hell that is plex apis
             # The param needs to target what is watched so, to for show give show rating key as
-            #'grandparent_rating_key', season use 'parent_rating_key' and movie/episode use 'rating_key''  
+            # 'grandparent_rating_key', season use 'parent_rating_key' and movie/episode use 'rating_key''  
             case 'get_history':
                 params.update({'cmd': 'get_history', 'length': 1, 'order_column': 'date', 'order_dir': 'desc'})
                 return self._get_resp(params=params)
