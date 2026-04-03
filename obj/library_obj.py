@@ -223,3 +223,39 @@ class Library():
             for season in show.seasons:
                 t_season_dat = t.get_api_query('get_history', {'parent_rating_key': season.rating_key})
                 update_from_tautulli_helper(season, t_season_dat)
+
+    def update_deletion_scores(self, ordering: list) -> None:
+        all_media = self.movies + self.shows
+        
+        for item in ordering:
+            field, weight, required = item['field'], item['weight'], item['required']
+            
+            # collect all values for this field
+            values = []
+            for media in all_media:
+                value = getattr(media, field, None)
+                if not value:
+                    if required:
+                        log.exception(f"Ordering field '{field}' missing on: {media.title}")
+                        raise ValueError
+                else:
+                    values.append(value)
+            
+            # NOTE: Basic normalization right now (should I z-score for file size outliers?)
+            min_val, max_val = min(values), max(values)
+            span = max_val - min_val
+            
+            # apply normalized value * weight to each media's score
+            for media in all_media:
+
+                # Avoiding type error adding float to None but I want to keep intializing to null
+                if media.deletion_score is None: media.deletion_score = 0
+
+                value = getattr(media, field, None)
+                if value and span > 0:
+                    media.deletion_score += ((value - min_val) / span) * weight
+        
+        # handle exempt after scoring
+        for media in all_media:
+            if media.removal_exempt:
+                media.deletion_score = -1

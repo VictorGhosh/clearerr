@@ -124,18 +124,9 @@ def main():
     log.info(f"Attempting to clear approximately {human_size(clear_target)}s of media")
     # endregion
 
-    log.info("Calculating deletion scores")
     deletion_scoring_rules = config.ordering
-
-    log.info(deletion_scoring_rules)
-
-    for movie in pl.movies:
-        movie.set_deletion_score(deletion_scoring_rules)
-    for show in pl.shows:
-        show.set_deletion_score(deletion_scoring_rules)
-        # NOTE: At the moment I am treating shows as a unit but could easily go by season only edit here down
-        # for season in show.seasons:
-            # season.set_deletion_score()
+    log.info(f"Using rules: {deletion_scoring_rules}")
+    pl.update_deletion_scores(deletion_scoring_rules)
 
     combined_lib = pl.movies + pl.shows
     combined_lib.sort(key=lambda x: x.deletion_score, reverse=False)
@@ -145,9 +136,6 @@ def main():
         combined_lib_str += f'{str(m)}\n'
 
     log.info(f"Sorted library: {combined_lib_str}")
-    
-    # TODO SHOWS ADDED_ON DATE SHOULD PROBEBLY BE THE MOST RECENT ADDED SEASON TODO
-
 
 if __name__ == "__main__":
     main()
