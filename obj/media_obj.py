@@ -21,6 +21,7 @@ class _Media():
 
         # use setter. scaled score or -1 for exempt
         self.deletion_score = None
+        self.removal_exempt = False
 
     def __str__(self):
         partial = {
@@ -57,22 +58,6 @@ class _Media():
                 match = True
 
         return match
-
-    def set_deletion_score(self, ordering: list, removal_exempt: bool=False) -> None:
-        if removal_exempt:
-            self.deletion_score = -1
-            return
-        score = 0
-        for item in ordering:
-            field, weight, required = item['field'], item['weight'], item['required']
-            value = getattr(self, field, None)
-            if not value:
-                if required:
-                    log.exception(f"Ordering field '{field}' is missing or None on: {self.title}")
-                    raise ValueError
-                continue
-            score += value * weight
-        self.deletion_score = score
 
 
 class Movie(_Media):

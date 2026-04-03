@@ -11,15 +11,19 @@ goal:
   # min_age_days: 30
 
 # Each field must be an attribute of the media and will be multiplied by its weight and summed
-# A higher score means more likely to be remved
+# A higher score means less likely to be removed. If an attribute being higher means save it,
+# give a postive weight. If a higher value means remove it, give a negative weight
 # 'required' attributes will throw exception if left unset durring scoring
 ordering:
   - field: added_on
-    weight: 1.0
+    weight: 1.0 # save newer media
     required: true
   - field: last_watched
-    weight: 0.7
+    weight: 0.7 # save more recently watched media
     required: false
+  - field: size
+    weight: -0.1 # remove larger sized files
+    required: true
 
 thresholds:
   # skip_if_smaller_than_gb: 1
