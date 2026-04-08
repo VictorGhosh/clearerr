@@ -2,6 +2,7 @@
 import sys
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 from types import SimpleNamespace
 from api.os_storage import *
 import shutil
@@ -16,17 +17,23 @@ from obj.library_obj import Library
 import yaml
 
 # Logging setup
-log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, log_level, logging.INFO),
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
+log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clearerr.log")
+max_log_bytes = int(os.environ.get("LOG_SIZE_MB")) * 1024 * 1024
+log_level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
-# Shush requests http connection noises
+file_handler = RotatingFileHandler(log_path, maxBytes=max_log_bytes, backupCount=3)
+file_handler.setFormatter(formatter)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+logging.getLogger().setLevel(log_level)
+logging.getLogger().addHandler(file_handler)
+logging.getLogger().addHandler(stream_handler)
+
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
-
 log = logging.getLogger(__name__)
 log.info("Required pyhton libraries loaded")
 # endregion
@@ -41,7 +48,8 @@ def main():
         3. Get library storage sizes using os walk
             - Get share/array size and usage using shutil
             - Validate and set target storage amount to clear
-        4. NOT IMPLEMENTED
+        4. Calculate normalized deletion scores for media in library
+        5. NOT IMPLEMENTED
     """
     # region 1. pull rule variables # config.goal.free_gb or config.ordering[0].field
     def to_namespace(d):
@@ -57,33 +65,32 @@ def main():
     # endregion
 
     # region 2. library building
-    log.info("Building library object from Plex...")
+    log.info("Building library model from Plex....")
     pl = Library()
     pl.build_from_plex()
-    log.info("Completed building from Plex")
     log.debug(pl)
 
-    log.info('Building library object from Jellyfin...')
+    log.info('Building library model from Jellyfin...')
     jl = Library()
     jl.build_from_jellyfin()
-    log.info("Completed building from Jellyfin")
     log.debug(jl)
 
     # Validate and update libraries
     if pl == jl:
         log.info("Library model validated successfully")
     else:
-        log.error("Library models are not equivalent")
-        log.error("No continuation plan has been implemented yet for failed validation. Exiting")
-        raise ValueError
+        # TODO: What to do when library updates are out of sync
+        log.error("Library model validation failed. They are not equivalent")
+        log.error("No continuation plan has been implemented for failed validation yet. Exiting")
+        raise NotImplementedError
 
-    log.info("Updating Plex library watch stats using Tautulli. Expect warnings if Plex was watched without Tautulli running...")
+    log.info("Updating Plex watch statistics with Tautulli... (Expect warnings if Plex was watched without Tautulli running)")
     pl.update_from_tautulli()
     log.debug(pl)
-    log.info("Completed Tautulli to Plex library data update")
+    log.info("Completed Tautulli to Plex statistics update")
     # endregion
 
-    # region 3 check storage # This should be first but I want to keep testing library building
+    # region 3. check storage # This should be first but I want to keep testing library building
     o = OS_Storage()
     
     # get library sizes from os
@@ -122,8 +129,12 @@ def main():
         log.error("Something has gone very wrong, we aim to clear negative space")
         raise ValueError
     log.info(f"Attempting to clear approximately {human_size(clear_target)}s of media")
+    if config.goal.dry_run:
+        log.info(f"Dry run is enabled, nothing will be removed")
     # endregion
 
+    # region 4. apply rules to normalize and score media in library
+    log.info("Generating media deletion scores...")
     deletion_scoring_rules = config.ordering
     log.info(f"Using rules: {deletion_scoring_rules}")
     pl.update_deletion_scores(deletion_scoring_rules)
@@ -134,8 +145,30 @@ def main():
     combined_lib_str = f'Media ({len(combined_lib)} total):\n'
     for m in combined_lib:
         combined_lib_str += f'{str(m)}\n'
+    log.debug(f"Sorted library: {combined_lib_str.rstrip()}")
 
-    log.info(f"Sorted library: {combined_lib_str}")
+    selected = []
+    sum_selected = 0
+    for media in combined_lib:
+        selected.append(media)
+        sum_selected += media.size
+
+        if sum_selected >= clear_target: 
+            break
+
+    selected_str = f'Media ({len(selected)} total):\n'
+    for m in selected:
+        selected_str += f'{str(m)}\n'
+    log.info(f"Selected for removal ({human_size(sum_selected)}) {selected_str.rstrip()}")
+    # endregion
+
+    # region 5 media removal
+    if config.goal.dry_run:
+        log.info(f"Dry run is enabled, stopping here") 
+        sys.exit(0)
+
+    # endregion 
+
 
 if __name__ == "__main__":
     main()

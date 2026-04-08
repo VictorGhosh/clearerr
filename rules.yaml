@@ -3,7 +3,7 @@
 goal:
   # IMPORTANT: At the moment this is percentage of the share to leave empty of media. This 
   # has no impact on other files or the file system itself
-  free_percentage: 90
+  free_percentage: 75
   dry_run: true
 
 # constraints:
