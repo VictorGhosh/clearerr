@@ -1,12 +1,4 @@
 import os
-
-# XXX REMOVE THIS
-import sys
-lib_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib')
-if lib_path not in sys.path:
-    sys.path.insert(0, lib_path)
-# XXX
-
 import requests
 import json
 import logging
@@ -19,64 +11,93 @@ BASE_URL = f"http://{SEERR_IP}:5055/api/v1"
 
 # http://SEERR_IP:5055/api-docs 
 class Seerr_API:
+    '''Seerr api mainly for removing media.
+    NOTE: No implementation has been done for seasons yet. I have not found an endpoint that can make
+    it work even though the seasons do have their own seerr ids.'''
+
     def __init__(self, base_url=BASE_URL, api_key=SEERR_KEY):
         self.base_url = base_url
-        self.api_key = api_key
-
-    def _get_resp(self, params=None) -> json:
-        full_params = {
-            'apikey': self.api_key, 
-            'out': 'json'
+        self.headers = {
+            "X-Api-Key": api_key,
+            "Content-Type": "application/json"
         }
-        if params:
-            full_params.update(params)
 
-        # http requesting and network error handling
+    def _get_resp(self, endpoint, params=None) -> json:
+        url = f"{self.base_url}{endpoint}"
+
         try:
-            resp = requests.get(self.base_url, params=full_params, timeout=15)
+            resp = requests.get(url, headers=self.headers, params=params, timeout=15)
             resp.raise_for_status()
-        
+            return resp.json()
         except requests.exceptions.Timeout:
-            log.error("Error making API request: Request timed out.")
+            log.error("Seerr API request timed out.")
             return None
         except requests.exceptions.RequestException as e:
-            log.error(f"Error making API request: {e}")
+            log.error(f"Error making Seerr API request: {e}")
             return None
-        
-        # json parsing and structure related errors
-        try:
-            data = resp.json()
-            
-            return data['response']['data']        
-        
         except json.JSONDecodeError as e:
-            log.error(f"Invalid JSON returned: {e}")
-            log.error(f"Raw response: {resp.text[:500]}...")
-            return None
-        except KeyError as e:
-            log.error(f"Response structure error (missing key: {e}).")
-            log.error(f"Raw data: {data}")
+            log.error(f"Invalid JSON returned from Seerr: {e}")
             return None
 
-    def get_api_query(self, query, params={}): #-> json:
+    def _delete(self, endpoint) -> bool:
+        url = f"{self.base_url}{endpoint}"
+        try:
+            resp = requests.delete(url, headers=self.headers, timeout=15)
+            resp.raise_for_status()
+            return True
+        except requests.exceptions.RequestException as e:
+            log.error(f"Error making Seerr DELETE request: {e}")
+            return False
+
+    def get_api_query(self, query, params={}) -> json:
         query = query.strip().lower()
-
         match query:
-            case 'media':
-                return self._get_resp(params={'cmd': 'media'})
+            case 'get_media':
+                return self._get_resp("/media", params=params)  # {'take': -1} works for all one page?
+            case 'get_media_by_id':
+                return self._get_resp(f"/media/{params['id']}")
             case catchall:
+                log.exception(f"Unknown api query: {catchall}")
                 raise ValueError(f"Unknown api query: {catchall}")
+
+    def find_by_external_id(self, rating_key, ids: dict):
+        data = self.get_api_query('get_media', {'take': -1})
+        if not data or not data.get('results'):
+            log.error("No media returned from Seerr")
+            return None
+        for item in data['results']:
+            if str(item.get('ratingKey')) != str(rating_key):
+                continue
+
+            # found a match, validate all ids that exist on either side
+            mismatches = []
+            if ids.get('tmdb') and item.get('tmdbId') and str(item['tmdbId']) != str(ids['tmdb']):
+                mismatches.append(f"tmdb: expected {ids['tmdb']} got {item['tmdbId']}")
+            if ids.get('tvdb') and item.get('tvdbId') and str(item['tvdbId']) != str(ids['tvdb']):
+                mismatches.append(f"tvdb: expected {ids['tvdb']} got {item['tvdbId']}")
+            if ids.get('imdb') and item.get('imdbId') and str(item['imdbId']) != str(ids['imdb']):
+                mismatches.append(f"imdb: expected {ids['imdb']} got {item['imdbId']}")
+            if mismatches:
+                log.error(f"ID mismatch for rating_key {rating_key}: {', '.join(mismatches)}")
+                return None
+            return item
+        log.error(f"Could not find media in Seerr with rating_key={rating_key}")
+        return None
+
+    def delete_media(self, seerr_id) -> bool:
+        '''Delete media files then remove from Seerr. Works for both movies and shows.
+        NOTE: class note about removing seasons'''
+        if not self._delete(f"/media/{seerr_id}/file"):
+            log.error(f"File deletion failed for seerr id {seerr_id}, aborting Seerr removal")
+            return False
+        return self._delete(f"/media/{seerr_id}")
+
 
 if __name__ == "__main__":
     s = Seerr_API()
 
-    print(s._get_resp(params={'cmd': 'media'}))
-    # get /media
-    # find target by ratingkey
-    # validate using tmdbId, tvdbId, imdbId (one should be not null)
-    # take the "id"
-    # use /media/{id}/file to remove from partner (sonarr/radarr)
-    # use /media/{id} to remove from seerr
-
-    # shows can be found the same way but have seasons section. each season has an id.
-    # we cannot lookup the seasons directly here must parse down from season
+    # m = s.find_by_external_id(rating_key=451, ids={'imdb': 'tt0887883', 'tmdb': '4944', 'tvdb': '1147'})
+    media = s.find_by_external_id(rating_key=1359, ids={'imdb': 'tt0098904', 'tmdb': '1400', 'tvdb': '79169'})
+    # season = s.get_season_seerr_id(media, 2)
+    
+    print(s.delete_media(media['id']))
