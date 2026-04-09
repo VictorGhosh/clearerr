@@ -92,6 +92,25 @@ class Plex_API():
             case catchall:
                 log.exception(f"Unknown api query: {catchall}")
                 raise ValueError(f"Unknown api query: {catchall}")
+
+    def refresh_section_path(self, section_id, path) -> bool:
+        '''Trigger a targeted scan of a specific path in a library section.'''
+        headers = {
+            "X-Plex-Token": self.api_key,
+            "Accept": "application/json"
+        }
+        try:
+            resp = requests.get(
+                f"{self.base_url}/library/sections/{section_id}/refresh",
+                headers=headers,
+                params={'path': path},
+                timeout=15
+            )
+            resp.raise_for_status()
+            return True
+        except requests.exceptions.RequestException as e:
+            log.error(f"Error refreshing Plex section {section_id} at path {path}: {e}")
+            return False
     
     def get_path(self, rating_key: str):
         '''
@@ -125,3 +144,12 @@ class Plex_API():
             log.exception(f"Bad path parsing found: {paths}")
             raise ValueError(f"Bad path parsing found: {paths}")
         return paths[0]
+
+
+if __name__ == "__main__":
+    p = Plex_API()
+
+    # print(p.get_api_query('get_libraries')) 
+    # print(p.refresh_section_path(2, '/data/media/tv/Barry (2018) {tvdb-333072}'))
+    for i in p.get_api_query('get_libraries')['Directory']:
+        print(f"{i}\n")

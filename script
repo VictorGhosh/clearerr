@@ -10,6 +10,6 @@ log_trace "Entering cleararr python program"
 
 source /boot/config/plugins/user.scripts/scripts/clearerr/.env
 
-python3 /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.py >> "$LOG" 2>&1
+python3 /boot/config/plugins/user.scripts/scripts/clearerr/clearerr.py
 
 log_trace "Exited cleararr python program"
