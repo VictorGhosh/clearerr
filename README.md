@@ -18,28 +18,29 @@ Removal exemptions are managed through Jellyfin. Users may mark media in a desig
 
 ## Architecture
 
-- obj/        - core data model objects (Library, Show, Season, Movie)
-- api/        - API clients for Plex, Jellyfin, Radarr, and Tautulli
-- dev/        - dev tools
-- clearerr.py - Main entry from script (shell in current form) 
+- obj/          - core data model objects (Library, Show, Season, Movie)
+- api/          - API clients for Plex, Jellyfin, Radarr, and Tautulli
+- dev/          - dev tools
+- clearerr.py   - Main script execution
+- .env          - Needed variables such as IPs and Keys. See template in dev/
+- rules.yaml    - Execution settings including "ordering" which determines in what order media is deleted
 
 ## Status
 
-Data collection, validation, and object modeling are complete for Plex, Jellyfin, and Tautulli. We can successfully build the library model using these sources. Removal execution and rule logic is in active development. Following this, Library object validation will also be added.
+Basic function is mostly there. Library objects are created from both plex and jellyfin and and validated with eachother. Storage is calcualted and rules are applied to the library based on the yaml file.
 
 ### Remaining before stable state:
 
-- [ ] Build out sonarr api
+- Implement library update from jellyfin date to be applied post validation. We need the jellyfin ids to be added back to the final library (currently in neither) and might need the jellyfin docker container file paths as well.
 
-- [ ] Library validation - This should use all apis data and validate that the library object has accurate data in terms of names, paths, and sizes. Most importantly the library must be complete
+- Library updates
+    - Trigger targeted jellyfin refresh for removed items
+    - Trigger targeted library updates for both plex and jellyfin based on specific differences when library object validation fails. This will be the fall back, if a ater a few seconds validation fails again then it failed for good.
 
-- [ ] Solve download client problem - How do we remove from the download client when clearing space. Options:
-    - I know the original file name now we can just remove that - may cause issues with db junk
-    - Use the download clients api to remove before removing from media - pain
-    - Set a seed time, possibly infinite, to keep the media in the queue so we can get it. - Not ideal and has to be done for each indexer
+- Implement do not remove lists
+### Future adds
 
-- [ ] Standardize APIs - Changed multiple times while writing but I would like all of them to take the format of radarr_api. That is _get_resp() called by a second get method containing a case statesmen for all used api calls. Further parsing should wrap this second method.
+-   Add sqlite (or similar) for persistent data
+    - This will allow planned removals so instead of removing off the bat, we can set an upper and lower limit. When the lower limit is met the media get picked out and added to a removal playlist. It would only be removed after some time when the upper limit is met. This would give users times to watch or exempt media on the kill list
 
-- [ ] Seerr api - I need to find out if seerr is going to re-request after removal. If so we will need to stop it.
-
-- [ ] File and disk sizes - still have not fully landed on how this will work. Can I trust any of the other apis to have accurate file size data as plex seems be just making it up.
+-   Reports in addition to the current rotating logs, using the sqlite data this or a sister program could generate usage and statistical reports and send them elsewhere

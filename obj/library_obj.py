@@ -96,6 +96,8 @@ class Library():
                             media_obj.seasons.append(season)
 
                     # settings for both movies and shows
+                    media_obj.library_key = int(lib['key'])
+
                     media_obj.rating_key = media.get('ratingKey')
                     media_obj.added_on = media.get('addedAt')
                     media_obj.last_watched = media.get('lastViewedAt') # json var exists there is value

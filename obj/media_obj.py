@@ -8,6 +8,7 @@ class _Media():
     def __init__(self, title: str):
         self.title = title
         
+        self.library_key = None
         self.path = None
         self.size = None
 

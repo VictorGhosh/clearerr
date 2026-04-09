@@ -2,10 +2,11 @@
 import sys
 import os
 import logging
+import shutil
 from logging.handlers import RotatingFileHandler
 from types import SimpleNamespace
 from api.os_storage import *
-import shutil
+
 
 # Add lib directory to path don't lose imports (maintine order of imports)
 lib_path = os.path.join(os.path.dirname(__file__), 'lib')
@@ -14,6 +15,8 @@ if lib_path not in sys.path:
 
 # These must come after because they are pulled from lib folder
 from obj.library_obj import Library
+from api.seerr_api import Seerr_API
+from api.plex_api import Plex_API
 import yaml
 
 # Logging setup
@@ -167,8 +170,23 @@ def main():
         log.info(f"Dry run is enabled, stopping here") 
         sys.exit(0)
 
+    s = Seerr_API()
+    for media in selected:
+        log.info(f"Removing {media.title}...")
+        seerr_item = s.find_by_external_id(media.rating_key, media.ids)
+        s.delete_media(seerr_item['id'])
     # endregion 
 
+    # region 6 validation
+    log.info("Triggering focused plex update for removed media...")
+    p = Plex_API
+    for media in selected:
+        if p.refresh_section_path(media.library_key, media.path) is not True:
+            log.error(f"Failed to trigger plex update for {media}")
+
+    #TODO: update jellyfin using /media/{mediaId}/file we need to get the jellyfin_id
+    
+    # endregion
 
 if __name__ == "__main__":
     main()

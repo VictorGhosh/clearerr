@@ -97,7 +97,7 @@ if __name__ == "__main__":
     s = Seerr_API()
 
     # m = s.find_by_external_id(rating_key=451, ids={'imdb': 'tt0887883', 'tmdb': '4944', 'tvdb': '1147'})
-    media = s.find_by_external_id(rating_key=1359, ids={'imdb': 'tt0098904', 'tmdb': '1400', 'tvdb': '79169'})
+    media = s.find_by_external_id(rating_key=1165, ids={'imdb': 'tt5348176', 'tmdb': '73107', 'tvdb': '333072'})
     # season = s.get_season_seerr_id(media, 2)
     
     print(s.delete_media(media['id']))
