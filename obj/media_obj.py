@@ -14,6 +14,7 @@ class _Media():
 
         # IDs
         self.rating_key = None # Plex apps
+        self.jellyfin_id = None
         self.ids = {} # at least tmdb and tvdb
 
         # watch data
@@ -28,9 +29,11 @@ class _Media():
         partial = {
             'title': self.title,
             'rating_key': self.rating_key,
+            'jellyfin_id': self.jellyfin_id,
             'added': self.added_on,
             'last_watched': self.last_watched,
             'size': human_size(self.size),
+            'exempt': self.removal_exempt,
             'deletion_score': self.deletion_score
         }
         partial.update(self.ids)
