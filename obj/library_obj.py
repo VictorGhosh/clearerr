@@ -139,7 +139,6 @@ class Library():
 
             if lib_type == 'Movies' or lib_type == 'Shows':
                 for media in j.get_api_query('items', {'parent_id': vf['ItemId']})['Items']:
-
                     if lib_type == 'Movies':
                         media_obj = Movie(media['Name'])
                         media_obj.path = media.get('Path')
@@ -174,19 +173,21 @@ class Library():
                 for show in self.shows:
 
                     if not isinstance(show, Show):
-                        raise TypeError(f'Expected only shows but found {show}')
+                        log.exception(f'Expected only shows but found {show}')
+                        raise TypeError
     
                     if season.get('SeriesId') == show.jellyfin_id:
                         parent_obj = show
                         break
 
                 if parent_obj is None:
-                    raise ValueError(f"Failed to find parent for {season}")
+                    log.exception(f"Failed to find parent for {season}")
+                    raise ValueError
                 
                 season_obj = Season(season['Name'])
                 season_obj.path = season.get('Path')
                 season_obj.ids = {'tvdb': season.get('ProviderIds').get('Tvdb')}
-                season_obj.jellyfin_id = media.get('Id')
+                season_obj.jellyfin_id = season.get('Id')
 
                 try:
                     season_obj.size = o.get_size(season.get('Path'))
@@ -257,7 +258,71 @@ class Library():
                 if value and span > 0:
                     media.deletion_score += ((value - min_val) / span) * weight
         
-        # handle exempt after scoring
+        # multiplying moves to top of list but keeps order
         for media in all_media:
             if media.removal_exempt:
-                media.deletion_score = -1
+                media.deletion_score *= 10
+
+    def jellyfin_ids_to_pl(self, other):
+        '''Takes a jellyfin library and addes the jellyfin ids to this library'''
+        if self != other:
+            log.exception(f"Libraries must be equivalent")
+            raise ValueError
+
+        for movie in self.movies:
+            for other_movie in other.movies:
+                if movie == other_movie:
+                    movie.jellyfin_id = other_movie.jellyfin_id
+                    break
+
+        for show in self.shows:
+            for other_show in other.shows:
+                if show == other_show:
+                    show.jellyfin_id = other_show.jellyfin_id
+                    for season in show.seasons:
+                        for other_season in other_show.seasons:
+                            if season == other_season:
+                                season.jellyfin_id = other_season.jellyfin_id
+                                break
+                    break
+    
+    def populate_removal_exempt(self, exempt_string: str) -> None:
+        '''requires the jellyfin ids to already be set'''
+        j = Jellyfin_API()
+        saved_ids = j.get_saved_media_ids(exempt_string)
+        saved_media = saved_ids['parent_media']
+        saved_seasons = saved_ids['seasons']
+        
+        for media in self.movies:
+            if media.jellyfin_id in saved_media:
+                media.removal_exempt = True
+                saved_media.remove(media.jellyfin_id)
+
+        for media in self.shows:
+            if media.jellyfin_id in saved_media:
+                media.removal_exempt = True
+                saved_media.remove(media.jellyfin_id)
+
+                # at least one season must be saved for show to be saved and show must be saved if season
+                found_season = False
+                for season in media.seasons:
+                    if season.jellyfin_id in saved_seasons:
+                        found_season = True
+                        season.removal_exempt = True
+                        saved_seasons.remove(season.jellyfin_id)
+                
+                if found_season == False:
+                    log.exception(f"Show was marked as exempt without any of its seasons: {media.title}")
+                    raise ValueError
+
+        if len(saved_media) > 0 or len(saved_seasons) > 0:
+            log.exception(f"Something was marked exempt but could not be found. Media: {saved_media}, Seasons {saved_seasons}")
+            raise IndexError
+
+    def trigger_media_refresh(self, media):
+        p = Plex_API()
+        j = Jellyfin_API()
+        if p.refresh_section_path(media.library_key, media.path) != True:
+            log.error(f"Failed to trigger plex refresh for {media}")
+        if j.refresh_item(media.jellyfin_id) != True:
+            log.error(f"Failed to trigger jellyfin refresh for {media}")

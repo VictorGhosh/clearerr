@@ -8,7 +8,7 @@ A media server with only 50% storage used is wasting expensive storage space, wh
 
 ## How it Works
 
-clearerr builds a library model by querying Plex, Jellyfin, and Tautulli internal APIs. Then it will apply custom rules to identify media candidates for removal based on:
+clearerr builds a library model by querying Plex, Jellyfin, and Tautulli internal APIs. Then it will apply custom rules (rules.yaml) to identify media candidates for removal based on:
 - Time since added
 - Watch history stats
 - Current disk utilization
@@ -25,20 +25,9 @@ Removal exemptions are managed through Jellyfin. Users may mark media in a desig
 - .env          - Needed variables such as IPs and Keys. See template in dev/
 - rules.yaml    - Execution settings including "ordering" which determines in what order media is deleted
 
-## Status
-
-Basic function is mostly there. Library objects are created from both plex and jellyfin and and validated with eachother. Storage is calcualted and rules are applied to the library based on the yaml file.
-
-### Remaining before stable state:
-
-- Implement library update from jellyfin date to be applied post validation. We need the jellyfin ids to be added back to the final library (currently in neither) and might need the jellyfin docker container file paths as well.
-
-- Library updates
-    - Trigger targeted jellyfin refresh for removed items
-    - Trigger targeted library updates for both plex and jellyfin based on specific differences when library object validation fails. This will be the fall back, if a ater a few seconds validation fails again then it failed for good.
-
-- Implement do not remove lists
 ### Future adds
+
+- The main focus in v2 is removing the usage of Jellyfin for list making. While is solves the issue of the limited Plex api, it is a not designed for this. v2 will likely include a small docker app build only for making lists
 
 -   Add sqlite (or similar) for persistent data
     - This will allow planned removals so instead of removing off the bat, we can set an upper and lower limit. When the lower limit is met the media get picked out and added to a removal playlist. It would only be removed after some time when the upper limit is met. This would give users times to watch or exempt media on the kill list

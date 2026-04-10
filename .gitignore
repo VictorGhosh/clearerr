@@ -4,3 +4,4 @@ __pycache__/
 
 lib/*
 !lib/.gitkeep
+notes

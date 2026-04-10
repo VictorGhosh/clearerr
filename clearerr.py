@@ -3,6 +3,7 @@ import sys
 import os
 import logging
 import shutil
+from time import sleep
 from logging.handlers import RotatingFileHandler
 from types import SimpleNamespace
 from api.os_storage import *
@@ -52,7 +53,8 @@ def main():
             - Get share/array size and usage using shutil
             - Validate and set target storage amount to clear
         4. Calculate normalized deletion scores for media in library
-        5. NOT IMPLEMENTED
+        5. Media removal
+        6. Removal validation
     """
     # region 1. pull rule variables # config.goal.free_gb or config.ordering[0].field
     def to_namespace(d):
@@ -87,10 +89,16 @@ def main():
         log.error("No continuation plan has been implemented for failed validation yet. Exiting")
         raise NotImplementedError
 
+    log.info("Setting Jellyfin IDs in Plex library object...")
+    pl.jellyfin_ids_to_pl(jl)
+
+    log.info("Setting removal exempt items from Jellyfin...")
+    pl.populate_removal_exempt(os.environ.get("REMOVAL_EXEMPT_LIST_NAME"))
+
     log.info("Updating Plex watch statistics with Tautulli... (Expect warnings if Plex was watched without Tautulli running)")
     pl.update_from_tautulli()
-    log.debug(pl)
     log.info("Completed Tautulli to Plex statistics update")
+    log.debug(pl)
     # endregion
 
     # region 3. check storage # This should be first but I want to keep testing library building
@@ -148,7 +156,7 @@ def main():
     combined_lib_str = f'Media ({len(combined_lib)} total):\n'
     for m in combined_lib:
         combined_lib_str += f'{str(m)}\n'
-    log.debug(f"Sorted library: {combined_lib_str.rstrip()}")
+    log.info(f"Sorted library: {combined_lib_str.rstrip()}")
 
     selected = []
     sum_selected = 0
@@ -178,17 +186,38 @@ def main():
     # endregion 
 
     # region 6 validation
-    log.info("Triggering focused plex update for removed media...")
-    p = Plex_API
+    log.info("Triggering focused library updates for removed media...")
     for media in selected:
-        if p.refresh_section_path(media.library_key, media.path) is not True:
-            log.error(f"Failed to trigger plex update for {media}")
+        pl.trigger_media_refresh(media)
 
-    #TODO: update jellyfin using /media/{mediaId}/file we need to get the jellyfin_id
+    log.info("Waiting 30 seconds for refreshes to complete...")
+    sleep(30)
+
+    log.info("Rebuilding library model from Plex....")
+    pl2 = Library()
+    pl2.build_from_plex()
+    log.debug(pl)
     
+    removed = [m for m in selected if m in pl2.movies + pl2.shows]
+    if removed:
+        log.error(f"Media still present after deletion: {[m.title for m in removed]}")
+    else:
+        log.info("All targeted media removal validated")
+
+    # Recalculating from section 3
+    movies_size2 = o.get_size(os.environ.get("PATH_TO_MOVIES"))
+    shows_size2 = o.get_size(os.environ.get("PATH_TO_SHOWS"))
+    lib_size2 = movies_size2 + shows_size2
+    ls2, ms2, ss2 = human_size(lib_size2), human_size(movies_size2), human_size(shows_size2)
+    log.info(f"Calculated library sizes: Total: {ls2}, Movies: {ms2}, Shows: {ss2}")
+    log.info(f"{human_size(lib_size - lib_size2)}s Cleared - os walk")
+
+    # get share/array stats from shutil. these will be more accurate to os including file system
+    share_total2, share_used2, share_free2 = shutil.disk_usage(os.environ.get("LIBRARY_SHARE"))
+    st2, su2, sf2 = human_size(share_total2), human_size(share_used2), human_size(share_free2) 
+    log.info(f"Calculated share data: Total: {st2}, Used: {su2}, Free: {sf2}")
+    log.info(f"{human_size(share_used - share_used2)}s Cleared - share")
     # endregion
 
 if __name__ == "__main__":
     main()
-    # def jprint(input: str) -> None:
-    #     print(json.dumps(input, indent=4))
