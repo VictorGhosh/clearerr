@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>clearerr-web</Name>
-  <Repository>mold1989/clearerr-web:latest</Repository>
+  <Repository>mold1989/clearerr-web:dev</Repository>
   <Registry>https://hub.docker.com/r/mold1989/clearerr-web</Registry>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
