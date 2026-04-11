@@ -1,33 +1,14 @@
-# from fastapi import FastAPI
-# app = FastAPI()
+from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
 
-# @app.get("/")
-# def root():
-#     return {"hello": "world"}
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
-
-
-
-from jinja2 import Environment, FileSystemLoader
-
-max_score = 100
-test_name = "Python Challenge"
-students = [
-    {"name": "Sandrine",  "score": 100},
-    {"name": "Gergeley", "score": 87},
-    {"name": "Frieda", "score": 92},
-]
-
-environment = Environment(loader=FileSystemLoader("templates/"))
-template = environment.get_template("message.txt")
-
-for student in students:
-    filename = f"message_{student['name'].lower()}.txt"
-    content = template.render(
-        student,
-        max_score=max_score,
-        test_name=test_name
-    )
-    with open(filename, mode="w", encoding="utf-8") as message:
-        message.write(content)
-        print(f"... wrote {filename}")
+@app.get("/")
+def index(request: Request):
+    # eventually this comes from sqlite
+    media = [
+        {"title": "Breaking Bad", "poster": "https://image.tmdb.org/t/p/w200/ggFHVNu6YYI5L9pCfOacjizRGt.jpg", "exempt": False},
+        {"title": "The Godfather", "poster": "https://image.tmdb.org/t/p/w200/3bhkrj58Vtu7enYsLePmd2e9UZ.jpg", "exempt": True},
+    ]
+    return templates.TemplateResponse("index.html", {"request": request, "media": media})

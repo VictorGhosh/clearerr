@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clearerr</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org"></script>
+</head>
+<body class="p-8 bg-base-200">
+    <h1 class="text-3xl font-bold mb-6">Media Library</h1>
+    <div class="grid grid-cols-4 gap-4">
+        {% for item in media %}
+        <div class="card bg-base-100 shadow">
+            <figure><img src="{{ item.poster }}" /></figure>
+            <div class="card-body">
+                <h2 class="card-title">{{ item.title }}</h2>
+                <input type="checkbox" class="toggle toggle-primary"
+                    {% if item.exempt %}checked{% endif %}>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
