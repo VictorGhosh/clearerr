@@ -27,15 +27,15 @@ def index(request: Request):
         SELECT m.*, e.exempted_at 
         FROM media m
         LEFT JOIN exempt e ON e.rating_key = m.rating_key
-        ORDER BY deletion_score ASC
+        ORDER BY title
     """).fetchall()
     conn.close()
     return templates.TemplateResponse(request=request, name="index.html", context={"media": media})
 
 @app.get("/search")
-def search(request: Request, q: str = "", sort: str = "deletion_score"):
+def search(request: Request, q: str = "", sort: str = "title"):
     conn = get_db()
-    order = "title" if sort == "title" else "deletion_score DESC"
+    order = "title" if sort == "title" else "deletion_score ASC"
     media = conn.execute(f"""
         SELECT m.*, e.exempted_at 
         FROM media m
