@@ -246,6 +246,31 @@ class Library():
             else:
                 show.poster_url = t.get_poster_url(show.ids.get('tmdb'), 'tv')
 
+    def update_exempt_status(self, db_path: str) -> None:
+        import sqlite3
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            # check if exempt table exists
+            table = conn.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='exempt'
+            """).fetchone()
+            if not table:
+                log.warning("Exempt table does not exist in database, skipping exempt status update")
+                conn.close()
+                return
+            exempt_keys = {row['rating_key'] for row in conn.execute("SELECT rating_key FROM exempt").fetchall()}
+            conn.close()
+        except Exception as e:
+            log.error(f"Failed to read exempt table from database: {e}")
+            return
+    
+        for media in self.movies + self.shows:
+            if media.rating_key in exempt_keys:
+                media.removal_exempt = True
+                log.debug(f"Marked as exempt: {media.title}")        
+
     def update_deletion_scores(self, ordering: list) -> None:
         all_media = self.movies + self.shows
         

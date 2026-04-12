@@ -87,6 +87,9 @@ def main():
     log.info("Generating tmdb poster data...")
     pl.update_poster_urls()
 
+    log.info("Updating library with exemption data from database")
+    pl.update_exempt_status(os.environ.get("DB_PATH"))
+
     log.info("Generating media deletion scores...")
     deletion_scoring_rules = config.ordering
     log.info(f"Using rules: {deletion_scoring_rules}")
