@@ -21,3 +21,10 @@ jobs:
         with:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/clearerr-web:${{ github.ref_name }}
+        
+      - name: Tag as latest if main
+        if: github.ref_name == 'main'
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/clearerr-web:latest
