@@ -27,7 +27,7 @@ def index(request: Request):
         SELECT m.*, e.exempted_at 
         FROM media m
         LEFT JOIN exempt e ON e.rating_key = m.rating_key
-        ORDER BY deletion_score DESC
+        ORDER BY deletion_score ASC
     """).fetchall()
     conn.close()
     return templates.TemplateResponse(request=request, name="index.html", context={"media": media})
