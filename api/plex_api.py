@@ -1,3 +1,10 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+lib_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib')
+if lib_path not in sys.path:
+    sys.path.insert(0, lib_path)
+
 import os
 import requests
 import json
@@ -151,5 +158,11 @@ if __name__ == "__main__":
 
     # print(p.get_api_query('get_libraries')) 
     # print(p.refresh_section_path(2, '/data/media/tv/Barry (2018) {tvdb-333072}'))
-    for i in p.get_api_query('get_libraries')['Directory']:
-        print(f"{i}\n")
+    for lib in p.get_api_query('get_libraries')['Directory']:
+        lib_type = lib['title']
+        if lib_type == 'Movies' or lib_type == 'TV Shows':
+            for media in p.get_api_query('get_library_items', {'section_id': lib['key']}):
+                if lib_type == 'Movies':
+                    # media_obj = Movie(media['title'])
+                    # media_obj.path = media['Media'][0]['Part'][0]['file']
+                    print(f"{media}/n")

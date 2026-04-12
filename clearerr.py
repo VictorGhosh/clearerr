@@ -1,4 +1,4 @@
-# region Setup and imports
+# region 0 Setup and imports
 import sys
 import os
 import logging
@@ -42,21 +42,8 @@ log = logging.getLogger(__name__)
 log.info("Required pyhton libraries loaded")
 # endregion
 
-
 def main():
-    """Main program execution. region comment break this into sections
-        1. Pull variables/settings from the rules file
-        2. Build Plex and Jellyin library objects. 
-            - Validate the libray objects with eachother 
-            - Update Plex watch data using Tautulli
-        3. Get library storage sizes using os walk
-            - Get share/array size and usage using shutil
-            - Validate and set target storage amount to clear
-        4. Calculate normalized deletion scores for media in library
-        5. Media removal
-        6. Removal validation
-    """
-    # region 1. pull rule variables # config.goal.free_gb or config.ordering[0].field
+    # region 1: Pull rules
     def to_namespace(d):
         if isinstance(d, dict):
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
@@ -69,7 +56,7 @@ def main():
         config = to_namespace(yaml.safe_load(f))
     # endregion
 
-    # region 2. library building
+    # region 2: Library building
     log.info("Building library model from Plex....")
     pl = Library()
     pl.build_from_plex()
@@ -92,16 +79,25 @@ def main():
     log.info("Setting Jellyfin IDs in Plex library object...")
     pl.jellyfin_ids_to_pl(jl)
 
-    log.info("Setting removal exempt items from Jellyfin...")
-    pl.populate_removal_exempt(os.environ.get("REMOVAL_EXEMPT_LIST_NAME"))
-
     log.info("Updating Plex watch statistics with Tautulli... (Expect warnings if Plex was watched without Tautulli running)")
     pl.update_from_tautulli()
     log.info("Completed Tautulli to Plex statistics update")
     log.debug(pl)
+
+    log.info("Generating tmdb poster data...")
+    pl.update_poster_urls()
+
+    log.info("Generating media deletion scores...")
+    deletion_scoring_rules = config.ordering
+    log.info(f"Using rules: {deletion_scoring_rules}")
+    pl.update_deletion_scores(deletion_scoring_rules)
+    log.debug(pl)
+
+    log.info("Library object generation complete. Writing to database")
+    pl.write_to_sqlite(os.environ.get("DB_PATH"))
     # endregion
 
-    # region 3. check storage # This should be first but I want to keep testing library building
+    # region 3: Storage check
     o = OS_Storage()
     
     # get library sizes from os
@@ -144,12 +140,7 @@ def main():
         log.info(f"Dry run is enabled, nothing will be removed")
     # endregion
 
-    # region 4. apply rules to normalize and score media in library
-    log.info("Generating media deletion scores...")
-    deletion_scoring_rules = config.ordering
-    log.info(f"Using rules: {deletion_scoring_rules}")
-    pl.update_deletion_scores(deletion_scoring_rules)
-
+    # region 4: Media selection
     combined_lib = pl.movies + pl.shows
     combined_lib.sort(key=lambda x: x.deletion_score, reverse=False)
 
@@ -173,7 +164,7 @@ def main():
     log.info(f"Selected for removal ({human_size(sum_selected)}) {selected_str.rstrip()}")
     # endregion
 
-    # region 5 media removal
+    # region 5: Media removal
     if config.goal.dry_run:
         log.info(f"Dry run is enabled, stopping here") 
         sys.exit(0)
@@ -185,7 +176,7 @@ def main():
         s.delete_media(seerr_item['id'])
     # endregion 
 
-    # region 6 validation
+    # region 6: Removal validation
     log.info("Triggering focused library updates for removed media...")
     for media in selected:
         pl.trigger_media_refresh(media)
@@ -217,6 +208,7 @@ def main():
     st2, su2, sf2 = human_size(share_total2), human_size(share_used2), human_size(share_free2) 
     log.info(f"Calculated share data: Total: {st2}, Used: {su2}, Free: {sf2}")
     log.info(f"{human_size(share_used - share_used2)}s Cleared - share")
+    log.info(f"We're done!")
     # endregion
 
 if __name__ == "__main__":

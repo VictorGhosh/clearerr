@@ -17,6 +17,8 @@ class _Media():
         self.jellyfin_id = None
         self.ids = {} # at least tmdb and tvdb
 
+        self.poster_url = None
+
         # watch data
         self.added_on = None
         self.last_watched = None
@@ -34,7 +36,8 @@ class _Media():
             'last_watched': self.last_watched,
             'size': human_size(self.size),
             'exempt': self.removal_exempt,
-            'deletion_score': self.deletion_score
+            'deletion_score': self.deletion_score,
+            'poster': self.poster_url
         }
         partial.update(self.ids)
         partial.update({'path': self.path})

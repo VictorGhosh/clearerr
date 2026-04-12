@@ -2,7 +2,9 @@ from obj.media_obj import *
 from api.plex_api import Plex_API
 from api.jellyfin_api import Jellyfin_API
 from api.tautulli_api import Tautulli_API
+from api.tmdb_api import Tmdb_API
 from api.os_storage import OS_Storage
+import sqlite3
 import logging
 log = logging.getLogger(__name__)
 
@@ -227,6 +229,23 @@ class Library():
                 t_season_dat = t.get_api_query('get_history', {'parent_rating_key': season.rating_key})
                 update_from_tautulli_helper(season, t_season_dat)
 
+    def update_poster_urls(self) -> None:
+        t = Tmdb_API()
+
+        for movie in self.movies:
+            # We need tmdb for the posters
+            if not movie.ids.get('tmdb'):
+                log.error(f"Failed to get tmdb id: {movie.title}")
+            else:
+                movie.poster_url = t.get_poster_url(movie.ids.get('tmdb'), 'movie')
+
+        for show in self.shows:
+            # We need tmdb for the posters
+            if not show.ids.get('tmdb'):
+                log.error(f"Failed to get tmdb id: {show.title}")
+            else:
+                show.poster_url = t.get_poster_url(show.ids.get('tmdb'), 'tv')
+
     def update_deletion_scores(self, ordering: list) -> None:
         all_media = self.movies + self.shows
         
@@ -326,3 +345,67 @@ class Library():
             log.error(f"Failed to trigger plex refresh for {media}")
         if j.refresh_item(media.jellyfin_id) != True:
             log.error(f"Failed to trigger jellyfin refresh for {media}")
+
+    def write_to_sqlite(self, db_path: str) -> None:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # media table - clearerr owns this entirely, drop and rebuild
+        cursor.execute("DROP TABLE IF EXISTS media")
+        cursor.execute("""
+            CREATE TABLE media (
+                rating_key TEXT PRIMARY KEY,
+                tmdb_key TEXT,
+                title TEXT,
+                media_type TEXT,
+                deletion_score REAL,
+                poster_url TEXT
+            )
+        """)
+
+        cursor.execute("DROP TABLE IF EXISTS seasons")
+        cursor.execute("""
+            CREATE TABLE seasons (
+                rating_key TEXT PRIMARY KEY,
+                show_rating_key TEXT,
+                tmdb_key TEXT,
+                title TEXT,
+                FOREIGN KEY (show_rating_key) REFERENCES media(rating_key)
+            )
+        """)
+
+        # exempt table - web app owns this, just has to exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS exempt (
+                rating_key TEXT PRIMARY KEY,
+                exempted_at INTEGER
+            )
+        """)
+
+        # write all media
+        for movie in self.movies:
+            cursor.execute("""
+                INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
+            """, (movie.rating_key, movie.ids['tmdb'], movie.title, 'movie', movie.deletion_score,
+                    movie.poster_url))
+
+        for show in self.shows:
+            cursor.execute("""
+                INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
+            """, (show.rating_key, show.ids['tmdb'], show.title, 'show', show.deletion_score,
+                    show.poster_url))
+
+            for season in show.seasons:
+                cursor.execute("""
+                    INSERT INTO seasons VALUES (?, ?, ?, ?)
+                """, (season.rating_key, show.rating_key, season.ids['tmdb'], season.title))
+
+        # clean up exempt entries for media no longer in library
+        cursor.execute("""
+            DELETE FROM exempt WHERE rating_key NOT IN 
+            (SELECT rating_key FROM media)
+        """)
+
+        conn.commit()
+        conn.close()
+        log.info(f"Library written to SQLite: {len(self.movies)} movies, {len(self.shows)} shows")
