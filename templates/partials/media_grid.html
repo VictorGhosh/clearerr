@@ -1,0 +1,70 @@
+<div class="collapse collapse-arrow bg-base-100 shadow mb-6">
+    <input type="checkbox" checked />
+    <div class="collapse-title text-xl font-bold">Movies</div>
+    <div class="collapse-content">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4">
+            {% for item in media if item.media_type == 'movie' %}
+            <div class="card bg-base-200 shadow">
+                <figure><img src="{{ item.poster_url }}" /></figure>
+                <div class="card-body">
+                    <div class="flex justify-between items-center">
+                        <h2 class="card-title">{{ item.title }}</h2>
+                        <div class="flex flex-col items-end">
+                            <input type="hidden" name="visible" value="{{ item.rating_key }}">
+                            <input type="checkbox" class="toggle toggle-primary"
+                                name="exempt"
+                                value="{{ item.rating_key }}"
+                                {% if item.exempted_at %}checked{% endif %}>
+                            {% if item.exempted_at %}
+                            <span class="text-xs text-base-content/50 mt-1">
+                                Saved {{ item.exempted_at | datetimeformat }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="collapse collapse-arrow bg-base-100 shadow mb-6">
+    <input type="checkbox" checked />
+    <div class="collapse-title text-xl font-bold">TV Shows</div>
+    <div class="collapse-content">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-4">
+            {% for item in media if item.media_type == 'show' %}
+            <div class="card bg-base-200 shadow">
+                <figure><img src="{{ item.poster_url }}" /></figure>
+                <div class="card-body">
+                    <div class="flex justify-between items-center">
+                        <h2 class="card-title">{{ item.title }}</h2>
+                        <div class="flex flex-col items-end">
+                            <input type="hidden" name="visible" value="{{ item.rating_key }}">
+                            <input type="checkbox" class="toggle toggle-primary"
+                                name="exempt"
+                                value="{{ item.rating_key }}"
+                                {% if item.exempted_at %}checked{% endif %}>
+                            {% if item.exempted_at %}
+                            <span class="text-xs text-base-content/50 mt-1">
+                                Saved {{ item.exempted_at | datetimeformat }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-base-100 shadow-lg flex justify-end">
+    <button class="btn btn-primary"
+        hx-post="/exempt/update"
+        hx-include="input[type='checkbox']"
+        hx-target="#media-grid">
+        Save Exempt Selections
+    </button>
+</div>
