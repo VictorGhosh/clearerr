@@ -5,7 +5,7 @@
 - [X] Test cleaerr script as a user script to make sure file paths are working still
 - [X] Remove lib and dev folders along with other userscripts required stuff
 - [X] Test frontend localy
-- [ ] Make new dockerhub repo and build front end
+- [X] Make new dockerhub repo and build front end
     - [ ] Rememeber to edit build context in docker hub to ./frontend
 - [ ] Get docker xml file wokring in unraid
     - [ ] Clean up refereances in backend
