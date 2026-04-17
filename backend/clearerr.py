@@ -10,7 +10,8 @@ from api.os_storage import *
 
 
 # Add lib directory to path don't lose imports (maintine order of imports)
-lib_path = os.path.join(os.path.dirname(__file__), 'lib')
+log.info(os.path.dirname(os.path.dirname(__file__)))
+lib_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib')
 if lib_path not in sys.path:
     sys.path.insert(0, lib_path)
 

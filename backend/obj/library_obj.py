@@ -39,7 +39,7 @@ class Library():
                     found = True
                     break
             if not found:
-                log.warning(f"Failed to match: {move.title}")
+                log.warning(f"Failed to match: {movie.title}")
                 return False
 
         for show in self.shows:

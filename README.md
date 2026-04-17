@@ -1,3 +1,16 @@
+# In progress branch
+### This branch in the process of being merged with the web-ui docker container. Steps to be completed below
+- [X] Inital merge of clearerr-web to cleaerr
+- [X] Reogranize file structure to preferend layout
+- [X] Test cleaerr script as a user script to make sure file paths are working still
+- [X] Remove lib and dev folders along with other userscripts required stuff
+- [X] Test frontend localy
+- [ ] Make new dockerhub repo and build front end
+    - [ ] Rememeber to edit build context in docker hub to ./frontend
+- [ ] Get docker xml file wokring in unraid
+    - [ ] Clean up refereances in backend
+- [ ] Schedule cron library runs
+
 # clearerr
 
 A self-hosted automation tool for managing storage on a Plexarr stack. Built out of my personal annoyance with existing options that don't account for actual disk usage or user preferences when deciding what to remove.

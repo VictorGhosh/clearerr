@@ -3,12 +3,17 @@ from fastapi.templating import Jinja2Templates
 import sqlite3
 import os
 import time
+from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
-load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parent
+
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 def datetimeformat(value):
     return datetime.fromtimestamp(value).strftime("%d-%m-%y")
@@ -16,8 +21,13 @@ def datetimeformat(value):
 templates.env.filters["datetimeformat"] = datetimeformat
 
 def get_db():
-    conn = sqlite3.connect(os.environ.get("DB_PATH"))
-    conn.row_factory = sqlite3.Row  # makes rows like dicts
+    db_path = os.environ.get("DB_PATH")
+    
+    if db_path and not os.path.isabs(db_path):
+        db_path = os.path.join(BASE_DIR, db_path)
+    
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
     return conn
 
 @app.get("/")
