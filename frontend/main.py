@@ -5,26 +5,20 @@ import os
 import time
 from pathlib import Path
 from datetime import datetime
-from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
-
-load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 def datetimeformat(value):
-    return datetime.fromtimestamp(value).strftime("%d-%m-%y")
+    return datetime.fromtimestamp(value).strftime("%m-%d-%y")
 
 templates.env.filters["datetimeformat"] = datetimeformat
 
 def get_db():
-    db_path = os.environ.get("DB_PATH")
-    
-    if db_path and not os.path.isabs(db_path):
-        db_path = os.path.join(BASE_DIR, db_path)
+    db_path = os.path.join(BASE_DIR, "..", "db", "clearerr.db")
     
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

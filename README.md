@@ -6,10 +6,11 @@
 - [X] Remove lib and dev folders along with other userscripts required stuff
 - [X] Test frontend localy
 - [X] Make new dockerhub repo and build front end
-    - [ ] Rememeber to edit build context in docker hub to ./frontend
-- [ ] Get docker xml file wokring in unraid
+    - [X] Rememeber to edit build context in docker hub to ./frontend
+- [ ] Get docker xml working wor in unraid
     - [ ] Clean up refereances in backend
 - [ ] Schedule cron library runs
+- [ ] Add logic to run inital scan if no db exists when container starts (or just when container starts I guess)
 
 # clearerr
 

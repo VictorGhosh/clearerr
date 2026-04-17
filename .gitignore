@@ -1,11 +1,9 @@
 notes
 
-# See .env_template for variables needed in .env
 .env
 __pycache__/
 
 db/*
 !db/.gitkeep
-
-*.log
 venv/
+*.log
