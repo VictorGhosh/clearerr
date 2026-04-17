@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>clearerr-web</Name>
+  <Repository>mold1989/clearerr-web:latest</Repository>
+  <Registry>https://hub.docker.com/r/mold1989/clearerr-web</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Overview>Clearerr web UI for managing media exempt list</Overview>
+  <Category>MediaApp:</Category>
+  <WebUI>http://[IP]:[PORT:8000]</WebUI>
+  <ExtraParams/>
+  <Config Name="Web UI Port" Target="8000" Default="8000" Mode="tcp" Description="Port for the web UI" Type="Port" Display="always" Required="true" Mask="false">8000</Config>
+  <Config Name="Database Path" Target="DB_PATH" Default="/data/clearerr.db" Description="Path to the SQLite database" Type="Variable" Display="always" Required="true" Mask="false">/data/clearerr.db</Config>
+  <Config Name="App Data" Target="/data" Default="/mnt/user/appdata/clearerr" Description="Path to store the database" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/clearerr</Config>
+</Container>
