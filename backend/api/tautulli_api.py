@@ -1,16 +1,11 @@
-import os
 import requests
 import json
+from settings.config import config
 import logging
 log = logging.getLogger(__name__)
 
-TAUTULLI_IP = os.environ.get("TAUTULLI_IP")
-TAUTULLI_KEY = os.environ.get("TAUTULLI_KEY")
-
-BASE_URL = f"http://{TAUTULLI_IP}:8181/api/v2"
-
 class Tautulli_API:
-    def __init__(self, base_url=BASE_URL, api_key=TAUTULLI_KEY):
+    def __init__(self, base_url=config.TAUTULLI_URL, api_key=config.TAUTULLI_KEY):
         self.base_url = base_url
         self.api_key = api_key
 

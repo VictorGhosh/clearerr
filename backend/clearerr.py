@@ -1,60 +1,51 @@
-# region 0 Setup and imports
 import sys
 import os
 import logging
 import shutil
+import yaml
+from pathlib import Path
 from time import sleep
 from logging.handlers import RotatingFileHandler
 from types import SimpleNamespace
 from api.os_storage import *
-
-
-# Add lib directory to path don't lose imports (maintine order of imports)
-log.info(os.path.dirname(os.path.dirname(__file__)))
-lib_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib')
-if lib_path not in sys.path:
-    sys.path.insert(0, lib_path)
-
-# These must come after because they are pulled from lib folder
 from obj.library_obj import Library
 from api.seerr_api import Seerr_API
-from api.plex_api import Plex_API
-import yaml
+from settings.config import config
 
-# Logging setup
-log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clearerr.log")
-max_log_bytes = int(os.environ.get("LOG_SIZE_MB")) * 1024 * 1024
-log_level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
+# region 0: Logging setup
+if not config.LOG_PATH.exists():
+    config.LOG_PATH.mkdir(parents=True, exist_ok=True)
+
+max_bytes = config.LOG_SIZE_MB * 1024 * 1024
+
+log_level = getattr(logging, config.LOG_LEVEL)
+
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-
-file_handler = RotatingFileHandler(log_path, maxBytes=max_log_bytes, backupCount=3)
+file_handler = RotatingFileHandler(config.LOG_PATH, maxBytes=max_bytes, backupCount=3)
 file_handler.setFormatter(formatter)
-
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 
 logging.getLogger().setLevel(log_level)
 logging.getLogger().addHandler(file_handler)
 logging.getLogger().addHandler(stream_handler)
-
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
+
 log.info("Required pyhton libraries loaded")
 # endregion
 
 def main():
+
     # region 1: Pull rules
     def to_namespace(d):
         if isinstance(d, dict):
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
         return d
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    rules_path = os.path.join(script_dir, "rules.yaml")
-
-    with open(rules_path) as f:
-        config = to_namespace(yaml.safe_load(f))
+    with open(config.RULES_PATH) as f:
+        rules = to_namespace(yaml.safe_load(f))
     # endregion
 
     # region 2: Library building
@@ -89,42 +80,42 @@ def main():
     pl.update_poster_urls()
 
     log.info("Updating library with exemption data from database")
-    pl.update_exempt_status(os.environ.get("DB_PATH"))
+    pl.update_exempt_status(config.DB_PATH)
 
     log.info("Generating media deletion scores...")
-    deletion_scoring_rules = config.ordering
+    deletion_scoring_rules = rules.ordering
     log.info(f"Using rules: {deletion_scoring_rules}")
     pl.update_deletion_scores(deletion_scoring_rules)
     log.debug(pl)
 
     log.info("Library object generation complete. Writing to database")
-    pl.write_to_sqlite(os.environ.get("DB_PATH"))
+    pl.write_to_sqlite(config.DB_PATH)
     # endregion
 
     # region 3: Storage check
     o = OS_Storage()
     
     # get library sizes from os
-    movies_size = o.get_size(os.environ.get("PATH_TO_MOVIES"))
-    shows_size = o.get_size(os.environ.get("PATH_TO_SHOWS"))
+    movies_size = o.get_size(config.PATH_TO_MOVIES)
+    shows_size = o.get_size(config.PATH_TO_SHOWS)
     lib_size = movies_size + shows_size
     ls, ms, ss = human_size(lib_size), human_size(movies_size), human_size(shows_size)
     log.info(f"Calculated library sizes: Total: {ls}, Movies: {ms}, Shows: {ss}")
 
     # get share/array stats from shutil. these will be more accurate to os including file system
-    share_total, share_used, share_free = shutil.disk_usage(os.environ.get("LIBRARY_SHARE"))
+    share_total, share_used, share_free = shutil.disk_usage(config.LIBRARY_SHARE)
     st, su, sf = human_size(share_total), human_size(share_used), human_size(share_free) 
     log.info(f"Calculated share data: Total: {st}, Used: {su}, Free: {sf}")
 
     # share will be larger than lib but if by too much there may be a leak so alert
-    if abs(int(share_used) - lib_size) > (config.thresholds.notify_if_lib_size_dif_larger_than_gb * 1024 ** 3):
+    if abs(int(share_used) - lib_size) > (rules.thresholds.notify_if_lib_size_dif_larger_than_gb * 1024 ** 3):
         log.warning("Library size and share usage difference exceeded threshold. Please investigate possible leak")
 
     # NOTE: Here I will use share data as usage because its larger.
-    target_free = config.goal.free_percentage * 0.01 * share_total
+    target_free = rules.goal.free_percentage * 0.01 * share_total
 
     # if target works out to be too low, alert
-    threshold_free_space = config.thresholds.notify_if_target_free_space_below_gb * 1024 ** 3
+    threshold_free_space = rules.thresholds.notify_if_target_free_space_below_gb * 1024 ** 3
     if (target_free < threshold_free_space):
         log.warning(f"Target free space ({human_size(target_free)}) is below threshold ({human_size(threshold_free_space)})")
 
@@ -140,7 +131,7 @@ def main():
         log.error("Something has gone very wrong, we aim to clear negative space")
         raise ValueError
     log.info(f"Attempting to clear approximately {human_size(clear_target)}s of media")
-    if config.goal.dry_run:
+    if rules.goal.dry_run:
         log.info(f"Dry run is enabled, nothing will be removed")
     # endregion
 
@@ -169,7 +160,7 @@ def main():
     # endregion
 
     # region 5: Media removal
-    if config.goal.dry_run:
+    if rules.goal.dry_run:
         log.info(f"Dry run is enabled, stopping here") 
         sys.exit(0)
 
@@ -200,8 +191,8 @@ def main():
         log.info("All targeted media removal validated")
 
     # Recalculating from section 3
-    movies_size2 = o.get_size(os.environ.get("PATH_TO_MOVIES"))
-    shows_size2 = o.get_size(os.environ.get("PATH_TO_SHOWS"))
+    movies_size2 = o.get_size(config.PATH_TO_MOVIES)
+    shows_size2 = o.get_size(config.PATH_TO_SHOWS)
     lib_size2 = movies_size2 + shows_size2
     ls2, ms2, ss2 = human_size(lib_size2), human_size(movies_size2), human_size(shows_size2)
     log.info(f"Calculated library sizes: Total: {ls2}, Movies: {ms2}, Shows: {ss2}")

@@ -1,16 +1,15 @@
-import os
 import requests
 import json
+from settings.config import config
 import logging
 log = logging.getLogger(__name__)
 
-TMDB_TOKEN = os.environ.get("TMDB_TOKEN")
 BASE_URL = "https://api.themoviedb.org/3"
-IMG_BASE = "https://image.tmdb.org/t/p/" + os.environ.get("IMAGE_SIZE")
+IMG_BASE = "https://image.tmdb.org/t/p/" + config.TMDB_IMAGE_SIZE
 
 class Tmdb_API:
 
-    def __init__(self, api_key=TMDB_TOKEN):
+    def __init__(self, api_key=config.TMDB_TOKEN):
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Accept": "application/json"
@@ -33,7 +32,3 @@ class Tmdb_API:
             log.error(f"No poster found for {media_type} tmdb_id={tmdb_id}")
             return None
         return f"{IMG_BASE}{data['poster_path']}"
-
-if __name__ == "__main__":
-    t = Tmdb_API()
-    print(t.get_poster_url('28415', 'movie'))

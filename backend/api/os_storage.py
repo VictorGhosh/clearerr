@@ -1,12 +1,11 @@
 import os
 import logging
+from settings.config import config
 log = logging.getLogger(__name__)
-
-LIBRARY_ROOT = os.environ.get("LIBRARY_ROOT")
 
 class OS_Storage():
 
-    def __init__(self, root: str=LIBRARY_ROOT):
+    def __init__(self, root: str=config.LIBRARY_ROOT):
         self.root = root
 
     def _full_path(self, path) -> str:

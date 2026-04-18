@@ -1,16 +1,11 @@
-import os
 import requests
 import json
+from settings.config import config
 import logging
 log = logging.getLogger(__name__)
 
-JELLYFIN_IP = os.environ.get("JELLYFIN_IP")
-JELLYFIN_KEY = os.environ.get("JELLYFIN_KEY")
-
-BASE_URL = f"http://{JELLYFIN_IP}:8096"
-
 class Jellyfin_API:
-    def __init__(self, base_url=BASE_URL, api_key=JELLYFIN_KEY):
+    def __init__(self, base_url=config.JELLYFIN_URL, api_key=config.JELLYFIN_TOKEN):
         self.base_url = base_url
         self.api_key = api_key
 
