@@ -148,10 +148,11 @@ class Library():
                                          'tmdb': media.get('ProviderIds').get('Tmdb')}
                         media_obj.jellyfin_id = media.get('Id')
 
-                        try:
-                            media_obj.size = o.get_size(media.get('Path'))
-                        except:
-                            log.exception(f"Failed to find file size: {media_obj.title}")
+                        # FIXME: Container path creation currently only works for plex
+                        # try:
+                        #     media_obj.size = o.get_size(media.get('Path'))
+                        # except:
+                        #     log.exception(f"Failed to find file size: {media_obj.title}")
 
                         self.movies.append(media_obj)
 
@@ -191,10 +192,11 @@ class Library():
                 season_obj.ids = {'tvdb': season.get('ProviderIds').get('Tvdb')}
                 season_obj.jellyfin_id = season.get('Id')
 
-                try:
-                    season_obj.size = o.get_size(season.get('Path'))
-                except:
-                    logging.exception(f"Failed to find file size: {season_obj.title}, {parent_obj.title}")
+                # FIXME: Fix pathing for jellyfin. currently only works for plex
+                # try:
+                #     season_obj.size = o.get_size(season.get('Path'))
+                # except:
+                #     logging.exception(f"Failed to find file size: {season_obj.title}, {parent_obj.title}")
 
                 parent_obj.seasons.append(season_obj)
 

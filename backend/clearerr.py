@@ -14,6 +14,7 @@ from settings.config import config
 
 # region 0: Logging setup
 log_path = Path(config._LOG_PATH)
+
 if not log_path.parent.exists():
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -97,14 +98,14 @@ def main():
     o = OS_Storage()
     
     # get library sizes from os
-    movies_size = o.get_size(config.PATH_TO_MOVIES)
-    shows_size = o.get_size(config.PATH_TO_SHOWS)
+    movies_size = o.get_size(config._PATH_TO_MEDIA + config._MOVIE_DIR)
+    shows_size = o.get_size(config._PATH_TO_MEDIA + config._SHOWS_DIR)
     lib_size = movies_size + shows_size
     ls, ms, ss = human_size(lib_size), human_size(movies_size), human_size(shows_size)
     log.info(f"Calculated library sizes: Total: {ls}, Movies: {ms}, Shows: {ss}")
 
     # get share/array stats from shutil. these will be more accurate to os including file system
-    share_total, share_used, share_free = shutil.disk_usage(config.LIBRARY_SHARE)
+    share_total, share_used, share_free = shutil.disk_usage(config._PATH_TO_MEDIA)
     st, su, sf = human_size(share_total), human_size(share_used), human_size(share_free) 
     log.info(f"Calculated share data: Total: {st}, Used: {su}, Free: {sf}")
 
@@ -192,15 +193,15 @@ def main():
         log.info("All targeted media removal validated")
 
     # Recalculating from section 3
-    movies_size2 = o.get_size(config.PATH_TO_MOVIES)
-    shows_size2 = o.get_size(config.PATH_TO_SHOWS)
+    movies_size2 = o.get_size(config._PATH_TO_MEDIA + config._MOVIE_DIR)
+    shows_size2 = o.get_size(config._PATH_TO_MEDIA + config._SHOWS_DIR)
     lib_size2 = movies_size2 + shows_size2
     ls2, ms2, ss2 = human_size(lib_size2), human_size(movies_size2), human_size(shows_size2)
     log.info(f"Calculated library sizes: Total: {ls2}, Movies: {ms2}, Shows: {ss2}")
     log.info(f"{human_size(lib_size - lib_size2)}s Cleared - os walk")
 
     # get share/array stats from shutil. these will be more accurate to os including file system
-    share_total2, share_used2, share_free2 = shutil.disk_usage(os.environ.get("LIBRARY_SHARE"))
+    share_total2, share_used2, share_free2 = shutil.disk_usage(os.environ.get("_PATH_TO_MEDIA"))
     st2, su2, sf2 = human_size(share_total2), human_size(share_used2), human_size(share_free2) 
     log.info(f"Calculated share data: Total: {st2}, Used: {su2}, Free: {sf2}")
     log.info(f"{human_size(share_used - share_used2)}s Cleared - share")
