@@ -7,14 +7,15 @@ from pathlib import Path
 from time import sleep
 from logging.handlers import RotatingFileHandler
 from types import SimpleNamespace
-from api.os_storage import *
-from obj.library_obj import Library
-from api.seerr_api import Seerr_API
+from .api.os_storage import *
+from .obj.library_obj import Library
+from .api.seerr_api import Seerr_API
 from settings.config import config
 
 # region 0: Logging setup
-if not config.LOG_PATH.exists():
-    config.LOG_PATH.mkdir(parents=True, exist_ok=True)
+log_path = Path(config.LOG_PATH)
+if not log_path.parent.exists():
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
 max_bytes = config.LOG_SIZE_MB * 1024 * 1024
 

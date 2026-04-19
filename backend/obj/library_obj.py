@@ -1,9 +1,9 @@
-from obj.media_obj import *
-from api.plex_api import Plex_API
-from api.jellyfin_api import Jellyfin_API
-from api.tautulli_api import Tautulli_API
-from api.tmdb_api import Tmdb_API
-from api.os_storage import OS_Storage
+from .media_obj import *
+from backend.api.plex_api import Plex_API
+from backend.api.jellyfin_api import Jellyfin_API
+from backend.api.tautulli_api import Tautulli_API
+from backend.api.tmdb_api import Tmdb_API
+from backend.api.os_storage import OS_Storage
 import sqlite3
 import logging
 log = logging.getLogger(__name__)

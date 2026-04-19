@@ -6,7 +6,7 @@ log = logging.getLogger(__name__)
 
 class Tautulli_API:
     def __init__(self, base_url=config.TAUTULLI_URL, api_key=config.TAUTULLI_KEY):
-        self.base_url = base_url
+        self.base_url = base_url + "/api/v2"
         self.api_key = api_key
 
     def _get_resp(self, params=None) -> json:

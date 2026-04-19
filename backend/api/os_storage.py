@@ -1,48 +1,22 @@
 import os
 import logging
+from pathlib import Path
 from settings.config import config
 log = logging.getLogger(__name__)
 
 class OS_Storage():
 
-    def __init__(self, root: str=config.LIBRARY_ROOT):
+    def __init__(self, root: str=config._PATH_TO_MEDIA):
         self.root = root
 
-    def _full_path(self, path) -> str:
-        """Join path with root and validate that join did its job. Annoyingly join seems to silenty
-        do nothing if there is a repeat like traiing / or root at the start if path
-
-        Args:
-            path (_type_): _description_
-
-        Returns:
-            str: _description_
-        """
-        full = os.path.join(self.root, path.lstrip('/'))
-        if full == path or full == self.root:
-            log.error(f"Join had no effect: {full}")
-        return full
-
-    def exists(self, path) -> bool:
-        """Returns if the given path from root is valid
-        """
-        return os.path.exists(self._full_path(path))
-
     def get_size(self, path) -> int | None:
-        """Get the apprent size of a a directory by walking below it. Seems to leave 
-        a substantial amount of overhead out of the returned value
 
-        Args:
-            path (_type_): _description_
-
-        Returns:
-            int | None: Bytes or None if not found.
-        """
         if path is None:
             return None
-        full = self._full_path(path)
-        if not self.exists(path):
-            return None
+        
+        p = Path(path)
+        full = os.path.join(self.root, Path(*p.parts[3:]))
+
         return sum(
             os.path.getsize(os.path.join(dp, f))
             for dp, _, files in os.walk(full)
