@@ -13,7 +13,7 @@ from .api.seerr_api import Seerr_API
 from settings.config import config
 
 # region 0: Logging setup
-log_path = Path(config.LOG_PATH)
+log_path = Path(config._LOG_PATH)
 if not log_path.parent.exists():
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -22,7 +22,7 @@ max_bytes = config.LOG_SIZE_MB * 1024 * 1024
 log_level = getattr(logging, config.LOG_LEVEL)
 
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-file_handler = RotatingFileHandler(config.LOG_PATH, maxBytes=max_bytes, backupCount=3)
+file_handler = RotatingFileHandler(config._LOG_PATH, maxBytes=max_bytes, backupCount=3)
 file_handler.setFormatter(formatter)
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
@@ -45,7 +45,7 @@ def main():
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
         return d
 
-    with open(config.RULES_PATH) as f:
+    with open(config._RULES_PATH) as f:
         rules = to_namespace(yaml.safe_load(f))
     # endregion
 
@@ -81,7 +81,7 @@ def main():
     pl.update_poster_urls()
 
     log.info("Updating library with exemption data from database")
-    pl.update_exempt_status(config.DB_PATH)
+    pl.update_exempt_status(config._DB_PATH)
 
     log.info("Generating media deletion scores...")
     deletion_scoring_rules = rules.ordering
@@ -90,7 +90,7 @@ def main():
     log.debug(pl)
 
     log.info("Library object generation complete. Writing to database")
-    pl.write_to_sqlite(config.DB_PATH)
+    pl.write_to_sqlite(config._DB_PATH)
     # endregion
 
     # region 3: Storage check
