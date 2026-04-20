@@ -16,6 +16,7 @@ RUN mkdir -p /app/logs
 # CMD ["uvicorn", "frontend.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # cron
+COPY . .
 RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
 RUN chmod +x /app/docker-entrypoint.sh
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
