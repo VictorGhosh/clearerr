@@ -7,10 +7,18 @@
 - [X] Test frontend localy
 - [X] Make new dockerhub repo and build front end
     - [X] Rememeber to edit build context in docker hub to ./frontend
-- [ ] Get docker xml working wor in unraid
-    - [ ] Clean up refereances in backend
+- [ ] Get docker xml working in unraid
+    - [X] Clean up refereances in backend
 - [ ] Schedule cron library runs
-- [ ] Add logic to run inital scan if no db exists when container starts (or just when container starts I guess)
+
+TODO
+- [ ] Add logic to run inital scan if no db exists (or just when container starts I guess)
+- [ ] Fix container path generation for jellyfin
+- [ ] Add targeted library scan logic for if the validation fails on start
+- [ ] Add periodic health checks, especially for less uesd api connections like seerr
+- [ ] Migrate to tautulli for image api instead of direct to tmdb (less WAN calls and fewer accounts needed)
+- [ ] A ways away from not requiring plex but add logic now to not require jellyfin (no validation)
+- [ ] Add logic to not require tautulli (will require tmdb key as backup for images)
 
 # clearerr
 

@@ -84,7 +84,7 @@ class Library():
                             season.path = p.get_path(c.get('ratingKey'))
 
                             try:
-                                season.size = o.get_size(season.path)
+                                season.size = o.get_size(o.get_plex_path(season.path))
                             except:
                                 logging.exception(f"Failed to find file size: {season.title}, {media_obj.title}")
 
@@ -107,7 +107,7 @@ class Library():
                     media_obj.path = p.get_path(media.get('ratingKey'))
 
                     try:
-                        media_obj.size = o.get_size(media_obj.path)
+                        media_obj.size = o.get_size(o.get_plex_path(media_obj.path))
                     except:
                         logging.exception(f"Failed to find file size: {media_obj.title}")
 

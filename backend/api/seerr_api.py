@@ -10,7 +10,7 @@ class Seerr_API:
     it work even though the seasons do have their own seerr ids.'''
 
     def __init__(self, base_url=config.SEERR_URL, api_key=config.SEERR_KEY):
-        self.base_url = base_url
+        self.base_url = base_url + "/api/v1"
         self.headers = {
             "X-Api-Key": api_key,
             "Content-Type": "application/json"
