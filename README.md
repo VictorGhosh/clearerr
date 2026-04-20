@@ -10,6 +10,7 @@
 - [ ] Get docker xml working in unraid
     - [X] Clean up refereances in backend
 - [ ] Schedule cron library runs
+- [ ] Finish readme
 
 TODO
 - [ ] Add logic to run inital scan if no db exists (or just when container starts I guess)
@@ -20,7 +21,7 @@ TODO
 - [ ] A ways away from not requiring plex but add logic now to not require jellyfin (no validation)
 - [ ] Add logic to not require tautulli (will require tmdb key as backup for images)
 
-# clearerr
+# Clearerr
 
 A self-hosted automation tool for managing storage on a Plexarr stack. Built out of my personal annoyance with existing options that don't account for actual disk usage or user preferences when deciding what to remove.
 

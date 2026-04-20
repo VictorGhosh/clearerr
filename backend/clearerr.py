@@ -1,5 +1,4 @@
 import sys
-import os
 import logging
 import shutil
 import yaml
@@ -19,7 +18,7 @@ if not log_path.parent.exists():
 
 max_bytes = config.LOG_SIZE_MB * 1024 * 1024
 log_level = getattr(logging, config.LOG_LEVEL)
-formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+formatter = logging.Formatter("%(levelname)s %(asctime)s: %(message)s", datefmt="%y-%m-%d %H:%M:%S")
 
 file_handler = RotatingFileHandler(log_path, maxBytes=max_bytes, backupCount=3)
 file_handler.setFormatter(formatter)

@@ -7,6 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Config:
 
+    # RUN_FREQUENCY defaults to every 12 hours but can be set in the template
+
     # App
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper() # INFO DEBUG
     LOG_SIZE_MB = int(os.environ.get("LOG_SIZE_MB", "5"))
