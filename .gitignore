@@ -7,3 +7,5 @@ db/*
 !db/.gitkeep
 venv/
 *.log
+
+archive*

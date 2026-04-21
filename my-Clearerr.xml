@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Clearerr</Name>
+  <Repository>mold1989/clearerr:dev</Repository>
+  <Registry/>https://hub.docker.com/r/mold1989/clearerr/<Registry/>
+  <Network></Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/VictorGhosh/clearerr</Project>
+  <ReadMe>https://github.com/VictorGhosh/clearerr/blob/main/README.md</ReadMe>
+  <Overview>Custom Python app to manage Plex/Arr libraries and clear space.</Overview>
+  <Category/>
+  <WebUI>http://[IP]:[PORT:8000]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/VictorGhosh/clearerr/refs/heads/main/my-Clearerr.xml</TemplateURL>
+  <Icon/>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="WEB UI PORT" Target="8000" Default="8000" Mode="tcp" Description="" Type="Port" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="/media" Target="/media" Default="" Mode="rw" Description="Parent media directory. Subdirectories are set with MOVIE_DIR and SHOWS_DIR" Type="Path" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="PLEX_URL" Target="PLEX_URL" Default="" Mode="" Description="http://x.x.x.x:32400" Type="Variable" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="PLEX_TOKEN" Target="PLEX_TOKEN" Default="" Mode="" Description="" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="JELLYFIN_URL" Target="JELLYFIN_URL" Default="" Mode="" Description="http://x.x.x.x:8096" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="JELLYFIN_TOKEN" Target="JELLYFIN_TOKEN" Default="" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="TAUTULLI_URL" Target="TAUTULLI_URL" Default="" Mode="" Description="http://x.x.x.x:8181" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="TAUTULLI_KEY" Target="TAUTULLI_KEY" Default="" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="SEERR_URL" Target="SEERR_URL" Default="" Mode="" Description="http://x.x.x.x:5055" Type="Variable" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="SEERR_KEY" Target="SEERR_KEY" Default="" Mode="" Description="" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="TMDB_TOKEN" Target="TMDB_TOKEN" Default="" Mode="" Description="Used to grab posters. Make an account with TMDB" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="BACKEND_CRON" Target="BACKEND_CRON" Default="0 */6 * * *" Mode="" Description="Cron schedule to run backend at, i.e. when library and images are updated and media is parsed/removed" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="/app/db" Target="/app/db" Default="/mnt/user/appdata/clearerr/db/" Mode="rw" Description="Database location mapped so db will persist container rebuilds" Type="Path" Display="advanced-hide" Required="false" Mask="false"></Config>
+  <Config Name="_LOG_PATH" Target="/app/logs" Default="/mnt/user/appdata/clearerr/logs" Mode="rw" Description="Reverse path makes logs accessible outside the container" Type="Path" Display="advanced-hide" Required="false" Mask="false"></Config>
+  <Config Name="LOG_SIZE_MB" Target="LOG_SIZE_MB" Default="5" Mode="" Description="Max size for rotating log" Type="Variable" Display="advanced-hide" Required="false" Mask="false"></Config>
+  <Config Name="LOG_LEVEL" Target="LOG_LEVEL" Default="INFO" Mode="" Description="DEBUG or INFO" Type="Variable" Display="advanced-hide" Required="false" Mask="false"></Config>
+  <Config Name="MOVIE_DIR" Target="MOVIE_DIR" Default="/movies" Mode="" Description="Directory within /media" Type="Variable" Display="advanced-hide" Required="false" Mask="false"></Config>
+  <Config Name="SHOWS_DIR" Target="SHOWS_DIR" Default="/tv" Mode="" Description="Directory within /media" Type="Variable" Display="advanced-hide" Required="false" Mask="false"></Config>
+  <TailscaleStateDir/>
+</Container>
