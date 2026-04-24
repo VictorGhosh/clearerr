@@ -1,22 +1,16 @@
-import os
 import requests
 import json
+from settings.config import config
 import logging
 log = logging.getLogger(__name__)
 
-SEERR_IP = os.environ.get("SEERR_IP")
-SEERR_KEY = os.environ.get("SEERR_KEY")
-
-BASE_URL = f"http://{SEERR_IP}:5055/api/v1"
-
-# http://SEERR_IP:5055/api-docs 
 class Seerr_API:
     '''Seerr api mainly for removing media.
     NOTE: No implementation has been done for seasons yet. I have not found an endpoint that can make
     it work even though the seasons do have their own seerr ids.'''
 
-    def __init__(self, base_url=BASE_URL, api_key=SEERR_KEY):
-        self.base_url = base_url
+    def __init__(self, base_url=config.SEERR_URL, api_key=config.SEERR_KEY):
+        self.base_url = base_url + "/api/v1"
         self.headers = {
             "X-Api-Key": api_key,
             "Content-Type": "application/json"
@@ -91,13 +85,3 @@ class Seerr_API:
             log.error(f"File deletion failed for seerr id {seerr_id}, aborting Seerr removal")
             return False
         return self._delete(f"/media/{seerr_id}")
-
-
-if __name__ == "__main__":
-    s = Seerr_API()
-
-    # m = s.find_by_external_id(rating_key=451, ids={'imdb': 'tt0887883', 'tmdb': '4944', 'tvdb': '1147'})
-    media = s.find_by_external_id(rating_key=1165, ids={'imdb': 'tt5348176', 'tmdb': '73107', 'tvdb': '333072'})
-    # season = s.get_season_seerr_id(media, 2)
-    
-    print(s.delete_media(media['id']))

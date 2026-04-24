@@ -1,17 +1,13 @@
 import os
 import requests
 import json
+from settings.config import config
 import logging
 log = logging.getLogger(__name__)
 
-PLEX_IP     = os.environ.get("PLEX_IP")
-PLEX_TOKEN  = os.environ.get("PLEX_TOKEN")
-
-BASE_URL = f"http://{PLEX_IP}:32400"
-
 class Plex_API():
 
-    def __init__(self, base_url=BASE_URL, api_key=PLEX_TOKEN):
+    def __init__(self, base_url=config.PLEX_URL, api_key=config.PLEX_TOKEN):
         self.base_url = base_url
         self.api_key = api_key
 
@@ -144,12 +140,3 @@ class Plex_API():
             log.exception(f"Bad path parsing found: {paths}")
             raise ValueError(f"Bad path parsing found: {paths}")
         return paths[0]
-
-
-if __name__ == "__main__":
-    p = Plex_API()
-
-    # print(p.get_api_query('get_libraries')) 
-    # print(p.refresh_section_path(2, '/data/media/tv/Barry (2018) {tvdb-333072}'))
-    for i in p.get_api_query('get_libraries')['Directory']:
-        print(f"{i}\n")

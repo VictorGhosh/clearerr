@@ -1,8 +1,10 @@
-from obj.media_obj import *
-from api.plex_api import Plex_API
-from api.jellyfin_api import Jellyfin_API
-from api.tautulli_api import Tautulli_API
-from api.os_storage import OS_Storage
+from .media_obj import *
+from backend.api.plex_api import Plex_API
+from backend.api.jellyfin_api import Jellyfin_API
+from backend.api.tautulli_api import Tautulli_API
+from backend.api.tmdb_api import Tmdb_API
+from backend.api.os_storage import OS_Storage
+import sqlite3
 import logging
 log = logging.getLogger(__name__)
 
@@ -37,7 +39,7 @@ class Library():
                     found = True
                     break
             if not found:
-                log.warning(f"Failed to match: {move.title}")
+                log.warning(f"Failed to match: {movie.title}")
                 return False
 
         for show in self.shows:
@@ -82,7 +84,7 @@ class Library():
                             season.path = p.get_path(c.get('ratingKey'))
 
                             try:
-                                season.size = o.get_size(season.path)
+                                season.size = o.get_size(o.get_plex_path(season.path))
                             except:
                                 logging.exception(f"Failed to find file size: {season.title}, {media_obj.title}")
 
@@ -105,7 +107,7 @@ class Library():
                     media_obj.path = p.get_path(media.get('ratingKey'))
 
                     try:
-                        media_obj.size = o.get_size(media_obj.path)
+                        media_obj.size = o.get_size(o.get_plex_path(media_obj.path))
                     except:
                         logging.exception(f"Failed to find file size: {media_obj.title}")
 
@@ -146,10 +148,11 @@ class Library():
                                          'tmdb': media.get('ProviderIds').get('Tmdb')}
                         media_obj.jellyfin_id = media.get('Id')
 
-                        try:
-                            media_obj.size = o.get_size(media.get('Path'))
-                        except:
-                            log.exception(f"Failed to find file size: {media_obj.title}")
+                        # FIXME: Container path creation currently only works for plex
+                        # try:
+                        #     media_obj.size = o.get_size(media.get('Path'))
+                        # except:
+                        #     log.exception(f"Failed to find file size: {media_obj.title}")
 
                         self.movies.append(media_obj)
 
@@ -189,10 +192,11 @@ class Library():
                 season_obj.ids = {'tvdb': season.get('ProviderIds').get('Tvdb')}
                 season_obj.jellyfin_id = season.get('Id')
 
-                try:
-                    season_obj.size = o.get_size(season.get('Path'))
-                except:
-                    logging.exception(f"Failed to find file size: {season_obj.title}, {parent_obj.title}")
+                # FIXME: Fix pathing for jellyfin. currently only works for plex
+                # try:
+                #     season_obj.size = o.get_size(season.get('Path'))
+                # except:
+                #     logging.exception(f"Failed to find file size: {season_obj.title}, {parent_obj.title}")
 
                 parent_obj.seasons.append(season_obj)
 
@@ -226,6 +230,48 @@ class Library():
             for season in show.seasons:
                 t_season_dat = t.get_api_query('get_history', {'parent_rating_key': season.rating_key})
                 update_from_tautulli_helper(season, t_season_dat)
+
+    def update_poster_urls(self) -> None:
+        t = Tmdb_API()
+
+        for movie in self.movies:
+            # We need tmdb for the posters
+            if not movie.ids.get('tmdb'):
+                log.error(f"Failed to get tmdb id: {movie.title}")
+            else:
+                movie.poster_url = t.get_poster_url(movie.ids.get('tmdb'), 'movie')
+
+        for show in self.shows:
+            # We need tmdb for the posters
+            if not show.ids.get('tmdb'):
+                log.error(f"Failed to get tmdb id: {show.title}")
+            else:
+                show.poster_url = t.get_poster_url(show.ids.get('tmdb'), 'tv')
+
+    def update_exempt_status(self, db_path: str) -> None:
+        import sqlite3
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            # check if exempt table exists
+            table = conn.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='exempt'
+            """).fetchone()
+            if not table:
+                log.warning("Exempt table does not exist in database, skipping exempt status update")
+                conn.close()
+                return
+            exempt_keys = {row['rating_key'] for row in conn.execute("SELECT rating_key FROM exempt").fetchall()}
+            conn.close()
+        except Exception as e:
+            log.error(f"Failed to read exempt table from database: {e}")
+            return
+    
+        for media in self.movies + self.shows:
+            if media.rating_key in exempt_keys:
+                media.removal_exempt = True
+                log.debug(f"Marked as exempt: {media.title}")        
 
     def update_deletion_scores(self, ordering: list) -> None:
         all_media = self.movies + self.shows
@@ -326,3 +372,67 @@ class Library():
             log.error(f"Failed to trigger plex refresh for {media}")
         if j.refresh_item(media.jellyfin_id) != True:
             log.error(f"Failed to trigger jellyfin refresh for {media}")
+
+    def write_to_sqlite(self, db_path: str) -> None:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # media table - clearerr owns this entirely, drop and rebuild
+        cursor.execute("DROP TABLE IF EXISTS media")
+        cursor.execute("""
+            CREATE TABLE media (
+                rating_key TEXT PRIMARY KEY,
+                tmdb_key TEXT,
+                title TEXT,
+                media_type TEXT,
+                deletion_score REAL,
+                poster_url TEXT
+            )
+        """)
+
+        cursor.execute("DROP TABLE IF EXISTS seasons")
+        cursor.execute("""
+            CREATE TABLE seasons (
+                rating_key TEXT PRIMARY KEY,
+                show_rating_key TEXT,
+                tmdb_key TEXT,
+                title TEXT,
+                FOREIGN KEY (show_rating_key) REFERENCES media(rating_key)
+            )
+        """)
+
+        # exempt table - web app owns this, just has to exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS exempt (
+                rating_key TEXT PRIMARY KEY,
+                exempted_at INTEGER
+            )
+        """)
+
+        # write all media
+        for movie in self.movies:
+            cursor.execute("""
+                INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
+            """, (movie.rating_key, movie.ids['tmdb'], movie.title, 'movie', movie.deletion_score,
+                    movie.poster_url))
+
+        for show in self.shows:
+            cursor.execute("""
+                INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
+            """, (show.rating_key, show.ids['tmdb'], show.title, 'show', show.deletion_score,
+                    show.poster_url))
+
+            for season in show.seasons:
+                cursor.execute("""
+                    INSERT INTO seasons VALUES (?, ?, ?, ?)
+                """, (season.rating_key, show.rating_key, season.ids['tmdb'], season.title))
+
+        # clean up exempt entries for media no longer in library
+        cursor.execute("""
+            DELETE FROM exempt WHERE rating_key NOT IN 
+            (SELECT rating_key FROM media)
+        """)
+
+        conn.commit()
+        conn.close()
+        log.info(f"Library written to SQLite: {len(self.movies)} movies, {len(self.shows)} shows")

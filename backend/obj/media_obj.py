@@ -1,6 +1,4 @@
-import os
-import time
-from api.os_storage import human_size
+from backend.api.os_storage import human_size
 import logging
 log = logging.getLogger(__name__)
 
@@ -16,6 +14,8 @@ class _Media():
         self.rating_key = None # Plex apps
         self.jellyfin_id = None
         self.ids = {} # at least tmdb and tvdb
+
+        self.poster_url = None
 
         # watch data
         self.added_on = None
@@ -34,7 +34,8 @@ class _Media():
             'last_watched': self.last_watched,
             'size': human_size(self.size),
             'exempt': self.removal_exempt,
-            'deletion_score': self.deletion_score
+            'deletion_score': self.deletion_score,
+            'poster': self.poster_url
         }
         partial.update(self.ids)
         partial.update({'path': self.path})
