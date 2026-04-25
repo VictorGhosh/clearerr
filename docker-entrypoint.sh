@@ -16,7 +16,7 @@ done
 DB_PATH="/app/db/clearerr.db"
 if [ ! -s "$DB_PATH" ]; then
     echo "Database not found. Initializing..." >&2
-    python3 -u -c "from backend.actions import Actions; Actions().initialize_db()"
+    python3 -u -c "from backend.clearerr import Actions; Actions().full_build_lib()"
 else
     echo "Database exists. Skipping initialization."
 fi
