@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Generate db if it does not exist yet
+DB_PATH="/app/db/clearerr.db"
+if [ ! -f "$DB_PATH" ]; then
+    echo "Database not found. Initializing..."
+    python3 -c "from backend.actions import Actions; Actions().initialize_db()"
+else
+    echo "Database exists. Skipping initialization."
+fi
+
 python3 -m uvicorn frontend.main:app --host 0.0.0.0 --port 8000 &
 MAIN_PROCESS_PID=$!
 
