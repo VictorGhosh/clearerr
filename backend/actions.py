@@ -7,8 +7,12 @@ import logging
 log = logging.getLogger(__name__)
 
 class Actions:
-    def initialize_db(self):
+    '''Periodic and helper backend functions'''
 
+    def initialize_db(self):
+        '''Basicly the same as the first section of the clearerr script. Runs in entrypoint before starting
+        fastAPI if the db does not already exist'''
+        
         def to_namespace(d):
             if isinstance(d, dict):
                 return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})

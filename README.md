@@ -45,7 +45,7 @@ The container was built on an unraid system with a segmented macvlan network and
 
 ## Things to add
 
-- [ ] Add logic to run initial scan if no db exists (or just when container starts I guess)
+- [x] Add logic to run initial scan if no db exists (or just when container starts I guess)
 - [ ] Add container path generation for Jellyfin
 - [ ] Add targeted library scan logic for if the validation fails on start
 - [ ] Add periodic health checks, especially for less used api connections like Seererr
