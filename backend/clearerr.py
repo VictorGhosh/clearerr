@@ -38,7 +38,15 @@ log = logging.getLogger(__name__)
 log.info("Required pyhton libraries loaded")
 
 class Actions:
-        def full_build_lib(self, rules: SimpleNamespace) -> Library:
+        def full_build_lib(self) -> Library:
+
+            def to_namespace(d):
+                if isinstance(d, dict):
+                    return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
+                return d
+
+            with open(config._RULES_PATH) as f:
+                rules = to_namespace(yaml.safe_load(f))
 
             log.info("Building library model from Plex....")
             pl = Library()
@@ -86,15 +94,7 @@ class Actions:
 def main():
 
     # region 1: Library building
-    def to_namespace(d):
-        if isinstance(d, dict):
-            return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
-        return d
-
-    with open(config._RULES_PATH) as f:
-        rules = to_namespace(yaml.safe_load(f))
-
-    pl = Actions().full_build_lib(rules)
+    pl = Actions().full_build_lib()
     # endregion
 
     # region 3: Storage check
