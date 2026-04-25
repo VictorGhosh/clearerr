@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Kill any existing python/uvicorn processes using /proc
+for pid in /proc/[0-9]*; do
+    cmd=$(cat $pid/cmdline 2>/dev/null | tr '\0' ' ')
+    if echo "$cmd" | grep -qE 'uvicorn|backend.clearerr'; then
+        # Don't kill our current script process
+        if [ "${pid##*/}" != "$$" ]; then
+            echo "Killing ghost process: $pid ($cmd)"
+            kill -9 "${pid##*/}" 2>/dev/null
+        fi
+    fi
+done
+
 # Generate db if it does not exist yet
 DB_PATH="/app/db/clearerr.db"
 if [ ! -f "$DB_PATH" ]; then
