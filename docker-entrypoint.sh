@@ -13,7 +13,7 @@ for pid in /proc/[0-9]*; do
 done
 
 # Generate db if it does not exist yet
-DB_PATH=$(python3 -c "from backend.settings.config import _DB_PATH; print(_DB_PATH)")
+DB_PATH=$(python3 -c "from settings.config import _DB_PATH; print(_DB_PATH)")
 if [ ! -s "$DB_PATH" ]; then
     echo "Database not found. Initializing..." >&2
     python3 -u -c "from backend.clearerr import Actions; Actions().full_build_lib()"
