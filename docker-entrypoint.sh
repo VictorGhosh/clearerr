@@ -24,11 +24,9 @@ fi
 python3 -m uvicorn frontend.main:app --host 0.0.0.0 --port 8000 &
 MAIN_PROCESS_PID=$!
 
-# cron cant find the right python3?
-printenv | grep -v "no_proxy" > /app/.env
-echo "${BACKEND_CRON:-0 0 * * *} . /app/.env; cd /app && $(which python3) -m backend.clearerr > /proc/1/fd/1 2>&1" | crontab -
-
-# cron in background
+# cron sucks
+printenv | grep -v "no_proxy" > /etc/environment
+echo "${BACKEND_CRON:-0 0 * * *} cd /app && $(which python3) -m backend.clearerr > /proc/1/fd/1 2>&1" | crontab -
 service cron start
 
 # watch main most likely to fail
