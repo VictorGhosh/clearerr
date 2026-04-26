@@ -92,6 +92,13 @@ class Actions:
             return pl
 
 def main():
+    # FIXME reloading rules. ugly code need to clean this up
+    def to_namespace(d):
+        if isinstance(d, dict):
+            return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
+        return
+    with open(config._RULES_PATH) as f:
+        rules = to_namespace(yaml.safe_load(f))
 
     # region 1: Library building
     pl = Actions().full_build_lib()
