@@ -12,15 +12,15 @@ A media server with only 50% storage used is wasting expensive disk space, while
 
 The plex api does not provide watch statistics for any users besides the owner, even if they are in the same plex home account, and has wildly inacctuate storage estemates.
 
-Clearerr builds library models by hitting internal APIs for Plex, Jellyfin, and Tautulli. It validates the library models are equivalent (all media accounted for and pointing to the same locations) and puts out target updates to Plex and Jellyfin when there are discrepancies until all the apps are synced. Accurate watch data is derived as the most recent value between the three providers.
+Clearerr builds library models by hitting internal APIs for Plex, Jellyfin, and Tautulli. It validates the library models are equivalent (all media accounted for and pointing to the same locations) and puts out targeted updates to Plex and Jellyfin when there are discrepancies until all the apps are synced. Accurate watch data is derived as the most recent value between the three providers.
 
-The seererr api is used to safely remove and unmonitor selected items. Afterwards target update requests are put to Plex and Jellyfin and the entire library is validated again.
+The seererr api is used to safely remove and unmonitor selected items. Afterwards targeted update requests are put to Plex and Jellyfin and the entire library is validated again.
 
 ### Storage and Rules
 
 Clearerr walks the actual library directories to see the real space used by the media and compares it to the free space on the share to determine if and how much removal is required.
 
-It uses a weighted rules engine (defined in settings/rules.yaml) to pick what gets deleted. These rule settings are normalized and weighted such that any media attribute can be added to the yaml file and used a deciding factor. My current rules include:
+It uses a weighted rules engine (defined in settings/rules.yaml) to pick what gets deleted. These rule settings are normalized and weighted such that any media attribute can be added to the yaml file and used as a deciding factor. My current rules include:
 
 - Time since added
 - Watch history stats
@@ -34,9 +34,9 @@ A previous iteration relied on users making specially named Jellyfin playlists t
 In this iteration the media exemptions are set by a custom built and hosted web interface. The data and images are set by the backend script via an internal SQLite database, while the frontend app updates the exemptions on a similar table. Users can log in and mark or unmark media as exempt. Note this container has no front end security at the moment, in production that is being handled by cloudflare tunnel authentication which supports google oauth.
 
 <p align="center">
-    <img src=".images/sort_name_iphone.jpg" width="280" alt="Mobile front page sorted by title">
-    <img src=".images/sort_remove_iphone.jpg" width="280" alt="Mobile front page sorted by closest removal">
-    <img src=".images/change_page_iphone.jpg" width="280" alt="Changes confirmation page">
+    <img src=".images/sort_name_iphone.jpg" width="260" alt="Mobile front page sorted by title">
+    <img src=".images/sort_remove_iphone.jpg" width="260" alt="Mobile front page sorted by closest removal">
+    <img src=".images/change_page_iphone.jpg" width="260" alt="Changes confirmation page">
 </p>
 
 ### Usage
@@ -45,7 +45,7 @@ The container was built on an unraid system with a segmented macvlan network and
 
 ## Things to add
 
-- [ ] Add logic to run initial scan if no db exists (or just when container starts I guess)
+- [x] Add logic to run initial scan if no db exists (or just when container starts I guess)
 - [ ] Add container path generation for Jellyfin
 - [ ] Add targeted library scan logic for if the validation fails on start
 - [ ] Add periodic health checks, especially for less used api connections like Seererr

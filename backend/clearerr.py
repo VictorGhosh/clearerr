@@ -11,7 +11,6 @@ from .obj.library_obj import Library
 from .api.seerr_api import Seerr_API
 from settings.config import config
 
-# region 0: Logging setup
 log_path = Path(config._LOG_PATH)
 if not log_path.parent.exists():
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -37,62 +36,73 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 
 log.info("Required pyhton libraries loaded")
-# endregion
+
+class Actions:
+        def full_build_lib(self) -> Library:
+
+            def to_namespace(d):
+                if isinstance(d, dict):
+                    return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
+                return d
+
+            with open(config._RULES_PATH) as f:
+                rules = to_namespace(yaml.safe_load(f))
+
+            log.info("Building library model from Plex....")
+            pl = Library()
+            pl.build_from_plex()
+            log.debug(pl)
+
+            log.info('Building library model from Jellyfin...')
+            jl = Library()
+            jl.build_from_jellyfin()
+            log.debug(jl)
+
+            # Validate and update libraries
+            if pl == jl:
+                log.info("Library model validated successfully")
+                log.info("Setting Jellyfin IDs in Plex library object...")
+                pl.jellyfin_ids_to_pl(jl)
+            else:
+                log.error("Library model validation failed. They are not equivalent")
+
+            log.info("Updating Plex watch statistics with Tautulli... (Expect warnings if Plex was watched without Tautulli running)")
+            pl.update_from_tautulli()
+            log.info("Completed Tautulli to Plex statistics update")
+            log.debug(pl)
+
+            log.info("Generating tmdb poster data...")
+            pl.update_poster_urls()
+
+            try:
+                log.info("Updating library with exemption data from database")
+                pl.update_exempt_status(config._DB_PATH)
+            except:
+                log.error("Failed to update library with exemption data. Expected if db is new")
+
+            log.info("Generating media deletion scores...")
+            deletion_scoring_rules = rules.ordering
+            log.info(f"Using rules: {deletion_scoring_rules}")
+            pl.update_deletion_scores(deletion_scoring_rules)
+            log.debug(pl)
+
+            log.info("Library object generation complete. Writing to database")
+            pl.write_to_sqlite(config._DB_PATH)
+
+            return pl
 
 def main():
-
-    # region 1: Pull rules
+    # FIXME reloading rules. ugly code need to clean this up
     def to_namespace(d):
         if isinstance(d, dict):
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
         return d
-
+    
     with open(config._RULES_PATH) as f:
         rules = to_namespace(yaml.safe_load(f))
-    # endregion
 
-    # region 2: Library building
-    log.info("Building library model from Plex....")
-    pl = Library()
-    pl.build_from_plex()
-    log.debug(pl)
-
-    log.info('Building library model from Jellyfin...')
-    jl = Library()
-    jl.build_from_jellyfin()
-    log.debug(jl)
-
-    # Validate and update libraries
-    if pl == jl:
-        log.info("Library model validated successfully")
-    else:
-        # TODO: What to do when library updates are out of sync
-        log.error("Library model validation failed. They are not equivalent")
-        log.error("No continuation plan has been implemented for failed validation yet. Exiting")
-        raise NotImplementedError
-
-    log.info("Setting Jellyfin IDs in Plex library object...")
-    pl.jellyfin_ids_to_pl(jl)
-
-    log.info("Updating Plex watch statistics with Tautulli... (Expect warnings if Plex was watched without Tautulli running)")
-    pl.update_from_tautulli()
-    log.info("Completed Tautulli to Plex statistics update")
-    log.debug(pl)
-
-    log.info("Generating tmdb poster data...")
-    pl.update_poster_urls()
-
-    log.info("Updating library with exemption data from database")
-    pl.update_exempt_status(config._DB_PATH)
-
-    log.info("Generating media deletion scores...")
-    deletion_scoring_rules = rules.ordering
-    log.info(f"Using rules: {deletion_scoring_rules}")
-    pl.update_deletion_scores(deletion_scoring_rules)
-    log.debug(pl)
-
-    log.info("Library object generation complete. Writing to database")
-    pl.write_to_sqlite(config._DB_PATH)
+    # region 1: Library building
+    pl = Actions().full_build_lib()
     # endregion
 
     # region 3: Storage check

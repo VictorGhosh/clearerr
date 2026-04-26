@@ -22,7 +22,7 @@
   <DonateLink/>
   <Requires/>
   <Config Name="WEB UI PORT" Target="8000" Default="8000" Mode="tcp" Description="" Type="Port" Display="always" Required="false" Mask="false"></Config>
-  <Config Name="/media" Target="/media" Default="" Mode="rw" Description="Parent media directory. Subdirectories are set with MOVIE_DIR and SHOWS_DIR" Type="Path" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="/media" Target="/media" Default="/mnt/user/data/media/" Mode="rw" Description="Parent media directory. Subdirectories are set with MOVIE_DIR and SHOWS_DIR" Type="Path" Display="always" Required="true" Mask="false"></Config>
   <Config Name="PLEX_URL" Target="PLEX_URL" Default="" Mode="" Description="http://x.x.x.x:32400" Type="Variable" Display="always" Required="true" Mask="false"></Config>
   <Config Name="PLEX_TOKEN" Target="PLEX_TOKEN" Default="" Mode="" Description="" Type="Variable" Display="always" Required="true" Mask="true"></Config>
   <Config Name="JELLYFIN_URL" Target="JELLYFIN_URL" Default="" Mode="" Description="http://x.x.x.x:8096" Type="Variable" Display="always" Required="false" Mask="false"></Config>
