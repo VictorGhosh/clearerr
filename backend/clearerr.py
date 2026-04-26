@@ -96,7 +96,8 @@ def main():
     def to_namespace(d):
         if isinstance(d, dict):
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
-        return
+        return d
+    
     with open(config._RULES_PATH) as f:
         rules = to_namespace(yaml.safe_load(f))
 
