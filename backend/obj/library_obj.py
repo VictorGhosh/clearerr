@@ -409,10 +409,6 @@ class Library():
                 queued_at INTEGER
             )
         """)
-        cursor.execute("""
-            DELETE FROM removal_queue WHERE rating_key NOT IN 
-            (SELECT rating_key FROM media)
-        """)
         
         # write all media
         for movie in self.movies:
@@ -432,9 +428,13 @@ class Library():
                     INSERT INTO seasons VALUES (?, ?, ?, ?)
                 """, (season.rating_key, show.rating_key, season.ids['tmdb'], season.title))
 
-        # clean up exempt entries for media no longer in library
+        # clean up exempt and removal entries for media no longer in library
         cursor.execute("""
             DELETE FROM exempt WHERE rating_key NOT IN 
+            (SELECT rating_key FROM media)
+        """)
+        cursor.execute("""
+            DELETE FROM removal_queue WHERE rating_key NOT IN 
             (SELECT rating_key FROM media)
         """)
 
