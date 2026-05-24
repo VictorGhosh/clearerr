@@ -22,7 +22,6 @@ ordering:
     required: true
 
 thresholds:
-  # skip_if_smaller_than_gb: 1
-  # notify_if_larger_than_gb: 20
+  process_scheduled_removal_after_hours: 168 # How many hours a media user schedueld for removal is held for
   notify_if_lib_size_dif_larger_than_gb: 300 # Difference between os walk and share calculation. accounts for non media files
   notify_if_target_free_space_below_gb: 500 # Just what actual value of free_percentage ends up being

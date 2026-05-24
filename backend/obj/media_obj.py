@@ -43,6 +43,9 @@ class _Media():
         partial.update({'path': self.path})
         return str(partial)
     
+    def __repr__(self):
+        return self.__str__()
+    
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return False
