@@ -28,9 +28,10 @@ def get_db():
 def index(request: Request):
     conn = get_db()
     media = conn.execute("""
-        SELECT m.*, e.exempted_at 
+        SELECT m.*, e.exempted_at, r.queued_at
         FROM media m
         LEFT JOIN exempt e ON e.rating_key = m.rating_key
+        LEFT JOIN removal_queue r ON r.rating_key = m.rating_key
         ORDER BY title
     """).fetchall()
     conn.close()
@@ -41,54 +42,63 @@ def search(request: Request, q: str = "", sort: str = "title"):
     conn = get_db()
     order = "title" if sort == "title" else "deletion_score ASC"
     media = conn.execute(f"""
-        SELECT m.*, e.exempted_at 
+        SELECT m.*, e.exempted_at, r.queued_at
         FROM media m
         LEFT JOIN exempt e ON e.rating_key = m.rating_key
+        LEFT JOIN removal_queue r ON r.rating_key = m.rating_key
         WHERE m.title LIKE ?
         ORDER BY {order}
     """, (f"%{q}%",)).fetchall()
     conn.close()
     return templates.TemplateResponse(request=request, name="partials/media_grid.html", context={"media": media})
 
-@app.post("/exempt/update")
-async def update_exempt(request: Request):
-    form = await request.form()
-    checked_keys = set(form.getlist("exempt"))
-    visible_keys = set(form.getlist("visible"))
-
+@app.get("/exempt/confirm/{rating_key}")
+def exempt_confirm(request: Request, rating_key: str):
     conn = get_db()
-    
-    existing = {row['rating_key'] for row in conn.execute("SELECT rating_key FROM exempt").fetchall()}
-
-    # need to cut out invisible ones because html it looks like its unchecked
-    newly_exempt = checked_keys - existing
-    newly_unexempt = (existing & visible_keys) - checked_keys
-    
-    for rating_key in newly_exempt:
-        conn.execute("""
-            INSERT INTO exempt (rating_key, exempted_at)
-            VALUES (?, ?)
-        """, (rating_key, int(time.time())))
-    
-    for rating_key in newly_unexempt:
-        conn.execute("DELETE FROM exempt WHERE rating_key = ?", (rating_key,))
-    
-    conn.commit()
-
-    # get titles for confirmation page
-    added = conn.execute(
-        f"SELECT title FROM media WHERE rating_key IN ({','.join('?'*len(newly_exempt))})",
-        list(newly_exempt)
-    ).fetchall() if newly_exempt else []
-
-    removed = conn.execute(
-        f"SELECT title FROM media WHERE rating_key IN ({','.join('?'*len(newly_unexempt))})",
-        list(newly_unexempt)
-    ).fetchall() if newly_unexempt else []
-
+    item = conn.execute("""
+        SELECT m.*, e.exempted_at 
+        FROM media m
+        LEFT JOIN exempt e ON e.rating_key = m.rating_key
+        WHERE m.rating_key = ?
+    """, (rating_key,)).fetchone()
     conn.close()
-    
-    return templates.TemplateResponse(request=request, name="confirm.html", context={
-        "added": sorted(added, key=lambda r: r['title']),
-        "removed": sorted(removed, key=lambda r: r['title'])
-    })
+    return templates.TemplateResponse(request=request, name="exempt_confirm.html", context={"item": item})
+
+@app.post("/exempt/toggle/{rating_key}")
+def exempt_toggle(rating_key: str):
+    conn = get_db()
+    existing = conn.execute("SELECT rating_key FROM exempt WHERE rating_key = ?", (rating_key,)).fetchone()
+    if existing:
+        conn.execute("DELETE FROM exempt WHERE rating_key = ?", (rating_key,))
+    else:
+        conn.execute("INSERT INTO exempt (rating_key, exempted_at) VALUES (?, ?)", (rating_key, int(time.time())))
+    conn.commit()
+    conn.close()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=303)
+
+@app.get("/remove/confirm/{rating_key}")
+def remove_confirm(request: Request, rating_key: str):
+    conn = get_db()
+    item = conn.execute("""
+        SELECT m.*, e.exempted_at, r.queued_at
+        FROM media m
+        LEFT JOIN exempt e ON e.rating_key = m.rating_key
+        LEFT JOIN removal_queue r ON r.rating_key = m.rating_key
+        WHERE m.rating_key = ?
+    """, (rating_key,)).fetchone()
+    conn.close()
+    return templates.TemplateResponse(request=request, name="remove_confirm.html", context={"item": item})
+
+@app.post("/remove/{rating_key}")
+def remove_media(rating_key: str):
+    conn = get_db()
+    existing = conn.execute("SELECT rating_key FROM removal_queue WHERE rating_key = ?", (rating_key,)).fetchone()
+    if existing:
+        conn.execute("DELETE FROM removal_queue WHERE rating_key = ?", (rating_key,))
+    else:
+        conn.execute("INSERT INTO removal_queue (rating_key, queued_at) VALUES (?, ?)", (rating_key, int(time.time())))
+    conn.commit()
+    conn.close()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=303)

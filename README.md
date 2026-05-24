@@ -31,8 +31,11 @@ It uses a weighted rules engine (defined in settings/rules.yaml) to pick what ge
 
 A previous iteration relied on users making specially named Jellyfin playlists to mark media as exempt as Plex will not provide other users collection or playlist data. This method was functional but clunky and required multiple accounts for each user.
 
-In this iteration the media exemptions are set by a custom built and hosted web interface. The data and images are set by the backend script via an internal SQLite database, while the frontend app updates the exemptions on a similar table. Users can log in and mark or unmark media as exempt. Note this container has no front end security at the moment, in production that is being handled by cloudflare tunnel authentication which supports google oauth.
+In this iteration the media exemptions are set by a custom built and hosted web interface. The data and images are set by the backend script via an internal SQLite database, while the frontend app updates the exemptions on a similar table. Users can log in and mark or unmark media as exempt or schedule for removal. Media scheduled for removal is put at the top of the queue for automated deletions and will be deleted regardless if left queued for a specified amount of time.
 
+ Note this container has no front end security at the moment, in production that is being handled by cloudflare tunnel authentication which supports google oauth.
+
+\*The images are from an old version before the ability to schedule removals was added
 <p align="center">
     <img src=".images/sort_name_iphone.jpg" width="260" alt="Mobile front page sorted by title">
     <img src=".images/sort_remove_iphone.jpg" width="260" alt="Mobile front page sorted by closest removal">
@@ -54,7 +57,9 @@ The container was built on an unraid system with a segmented macvlan network and
 - [ ] Add logic to not require Tautulli (will require tmdb key as backup for images)
 - [ ] Longer term: test on a non macvlan segmented system
 - [ ] Support for saving and removing seasons (the hold up here is this cannot be done with seerr as my networking topology has it on a separate vlan to Sonarr)
+- [ ] Improve UI; Add "recently deleted" and storage metrics
+
 
 ## Bugs
 
-- [ ] If somone leaves the app open or two people make changes at the same time, the second one will undo the changes of the first. Best and simplist fix would be to only update values that were touched in a session. Maybe force periodic reloads if possible.
+- [ ] Jellyfin targeted updates post removal are erroring. Most likely because the paths are incorrect as stated above

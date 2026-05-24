@@ -2,97 +2,140 @@ import sys
 import logging
 import shutil
 import yaml
-from pathlib import Path
-from time import sleep
-from logging.handlers import RotatingFileHandler
+
+from time import sleep, time
 from types import SimpleNamespace
+
 from .api.os_storage import *
-from .obj.library_obj import Library
 from .api.seerr_api import Seerr_API
+from .obj.library_obj import Library
 from settings.config import config
 
-log_path = Path(config._LOG_PATH)
-if not log_path.parent.exists():
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-
-max_bytes = config.LOG_SIZE_MB * 1024 * 1024
-log_level = getattr(logging, config.LOG_LEVEL)
-formatter = logging.Formatter("%(levelname)s %(asctime)s: %(message)s", datefmt="%y-%m-%d %H:%M:%S")
-
-file_handler = RotatingFileHandler(log_path, maxBytes=max_bytes, backupCount=3)
-file_handler.setFormatter(formatter)
-
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(formatter)
-
-root_logger = logging.getLogger()
-root_logger.setLevel(log_level)
-root_logger.addHandler(file_handler)
-root_logger.addHandler(console_handler)
-
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
-
+from .log_setup import setup_logging
+setup_logging(config)
 log = logging.getLogger(__name__)
+removals_log = logging.getLogger("removals")
+exemptions_log = logging.getLogger("exemptions")
 
 log.info("Required pyhton libraries loaded")
 
 class Actions:
-        def full_build_lib(self) -> Library:
+    def full_build_lib(self) -> Library:
 
-            def to_namespace(d):
-                if isinstance(d, dict):
-                    return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
-                return d
+        # Cant pull this from below because this action is run when db is missing i.e. on its own
+        def to_namespace(d):
+            if isinstance(d, dict):
+                return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
+            return d
+            
+        with open(config._RULES_PATH) as f:
+            rules = to_namespace(yaml.safe_load(f))
 
-            with open(config._RULES_PATH) as f:
-                rules = to_namespace(yaml.safe_load(f))
+        log.info("Building library model from Plex....")
+        pl = Library()
+        pl.build_from_plex()
+        log.debug(pl)
 
-            log.info("Building library model from Plex....")
-            pl = Library()
-            pl.build_from_plex()
-            log.debug(pl)
-
-            log.info('Building library model from Jellyfin...')
-            jl = Library()
-            jl.build_from_jellyfin()
-            log.debug(jl)
+        log.info('Building library model from Jellyfin...')
+        jl = Library()
+        jl.build_from_jellyfin()
+        log.debug(jl)
 
             # Validate and update libraries
-            if pl == jl:
-                log.info("Library model validated successfully")
-                log.info("Setting Jellyfin IDs in Plex library object...")
-                pl.jellyfin_ids_to_pl(jl)
+        if pl == jl:
+            log.info("Library model validated successfully")
+            log.info("Setting Jellyfin IDs in Plex library object...")
+            pl.jellyfin_ids_to_pl(jl)
+        else:
+            log.error("Library model validation failed. They are not equivalent")
+
+        log.info("Updating Plex watch statistics with Tautulli... (Expect warnings if Plex was watched without Tautulli running)")
+        pl.update_from_tautulli()
+        log.info("Completed Tautulli to Plex statistics update")
+        log.debug(pl)
+
+        log.info("Generating tmdb poster data...")
+        pl.update_poster_urls()
+            
+        try:
+            log.info("Updating library with exemption data from database...")
+            pl.update_exempt_status(config._DB_PATH)
+        except:
+            log.error("Failed to update library with exemption data. Expected if db is new")
+
+        log.info("Updating library with scheduled removals from database...")
+        pl.update_removal_scheduled_status(config._DB_PATH)
+             
+        log.info("Generating media deletion scores...")
+        deletion_scoring_rules = rules.ordering
+        log.info(f"Using rules: {deletion_scoring_rules}")
+        pl.update_deletion_scores(deletion_scoring_rules)
+        log.debug(pl)
+             
+        log.info("Library object generation complete. Writing to database")
+        pl.write_to_sqlite(config._DB_PATH)
+
+        return pl
+
+    def process_user_lists(self, pl: Library, rules: SimpleNamespace) -> bool:
+        """Mark user set exemptions and removals in logs and remove if nessesary. Library will be updated
+        if anything is removed.
+
+        Args:
+            pl (Library): from full_build_lib
+            rules (SimpleNamespace): rules namespace
+
+        Returns:
+            bool: True if media was removed and a new lib should be made and False otherwise
+        """
+        exempt_media = []
+        remove_media = []
+        for m in pl.movies + pl.shows:
+            if m.removal_exempt:
+                exempt_media.append(m)
+            if m.removal_scheduled > -1:
+                remove_media.append(m)
+
+        exemptions_log.info(f"Exempt: {exempt_media}")
+        removals_log.info(f"Scheduled {remove_media}")
+
+        actual_removals = []
+        for m in remove_media:
+            if time() > m.removal_scheduled + (rules.thresholds.process_scheduled_removal_after_hours * 3600):
+                if rules.goal.dry_run:
+                    log.info(f"Scheduled removal of {m.title} expected, canceled for dry run")
+                    removals_log.info(f"Scheduled removal of {m.title} expected, canceled for dry run")
+                else:
+                    s = Seerr_API()
+                    log.info(f"Removing {m.title} due to schedule...")
+                    removals_log.info(f"Removing {m.title} from {m.path}")
+                    seerr_item = s.find_by_external_id(m.rating_key, m.ids)
+                    s.delete_media(seerr_item['id'])
+                    actual_removals.append(m)
+
+        if actual_removals:
+            log.info("Triggering focused library updates for removed media...")
+            for media in actual_removals:
+                pl.trigger_media_refresh(media)
+
+            log.info("Waiting 30 seconds for refreshes to complete...")
+            sleep(30)
+
+            log.info("Rebuilding library model from Plex....")
+            pl2 = Library()
+            pl2.build_from_plex()
+            log.debug(pl)
+
+            removed = [m for m in actual_removals if m in pl2.movies + pl2.shows]
+            if removed:
+                log.error(f"Media still present after deletion: {[m.title for m in removed]}")
             else:
-                log.error("Library model validation failed. They are not equivalent")
+                log.info("All targeted media removal validated")
 
-            log.info("Updating Plex watch statistics with Tautulli... (Expect warnings if Plex was watched without Tautulli running)")
-            pl.update_from_tautulli()
-            log.info("Completed Tautulli to Plex statistics update")
-            log.debug(pl)
-
-            log.info("Generating tmdb poster data...")
-            pl.update_poster_urls()
-
-            try:
-                log.info("Updating library with exemption data from database")
-                pl.update_exempt_status(config._DB_PATH)
-            except:
-                log.error("Failed to update library with exemption data. Expected if db is new")
-
-            log.info("Generating media deletion scores...")
-            deletion_scoring_rules = rules.ordering
-            log.info(f"Using rules: {deletion_scoring_rules}")
-            pl.update_deletion_scores(deletion_scoring_rules)
-            log.debug(pl)
-
-            log.info("Library object generation complete. Writing to database")
-            pl.write_to_sqlite(config._DB_PATH)
-
-            return pl
+            return True
+        return False
 
 def main():
-    # FIXME reloading rules. ugly code need to clean this up
     def to_namespace(d):
         if isinstance(d, dict):
             return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
@@ -104,6 +147,9 @@ def main():
     # region 1: Library building
     pl = Actions().full_build_lib()
     # endregion
+
+    if Actions().process_user_lists(pl, rules):
+        pl = Actions().full_build_lib()
 
     # region 3: Storage check
     o = OS_Storage()

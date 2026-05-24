@@ -207,7 +207,7 @@ class Library():
             try:
                 t_last_watched = t_dat['data'][0]['date']
             except IndexError:
-                # tautulli has not record, validate plex agrees otherwise there is a problem
+                # tautulli has no record, validate plex agrees otherwise there is a problem
                 if media.last_watched is not None:
                     log.warning(f"Plex has a watch date but Tautulli does not: {media.title}")
                 return
@@ -215,7 +215,7 @@ class Library():
             if media.last_watched is None or t_last_watched > media.last_watched:
                 media.last_watched = t_last_watched
             elif t_last_watched < media.last_watched:
-                log.warning(f"Plex has a newer watch date than Tautulli: {media.title}")
+                log.warning(f"Plex has a newer watch date than Tautulli: {media.title}, difference: {media.last_watched - t_last_watched}")
 
         for movie in self.movies:
             t_dat = t.get_api_query('get_history', {'rating_key': movie.rating_key})
@@ -249,7 +249,6 @@ class Library():
                 show.poster_url = t.get_poster_url(show.ids.get('tmdb'), 'tv')
 
     def update_exempt_status(self, db_path: str) -> None:
-        import sqlite3
         try:
             conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
@@ -272,6 +271,28 @@ class Library():
             if media.rating_key in exempt_keys:
                 media.removal_exempt = True
                 log.debug(f"Marked as exempt: {media.title}")        
+
+    def update_removal_scheduled_status(self, db_path: str) -> None:
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            table = conn.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='removal_queue'
+            """).fetchone()
+            if not table:
+                log.warning("Removal Queue table does not exist in database, skipping removal status update")
+                conn.close()
+                return
+            removal_rows = {row['rating_key']: row['queued_at'] for row in conn.execute("SELECT rating_key, queued_at FROM removal_queue").fetchall()}
+            conn.close()
+        except Exception as e:
+            log.error(f"Failed to read removal_queue table from database: {e}")
+            return
+        for media in self.movies + self.shows:
+            if media.rating_key in removal_rows:
+                media.removal_scheduled = removal_rows[media.rating_key]
+                log.debug(f"Marked for removal: {media.title} at {media.removal_scheduled}")
 
     def update_deletion_scores(self, ordering: list) -> None:
         all_media = self.movies + self.shows
@@ -306,6 +327,11 @@ class Library():
         
         # multiplying moves to top of list but keeps order
         for media in all_media:
+            if media.removal_exempt and media.removal_scheduled > -1:
+                log.error(f"Media marked both exempt and scheduled for removal: {media.title}")
+                raise ValueError
+            if media.removal_scheduled > -1:
+                media.deletion_score *= -10
             if media.removal_exempt:
                 media.deletion_score *= 10
 
@@ -331,39 +357,6 @@ class Library():
                                 season.jellyfin_id = other_season.jellyfin_id
                                 break
                     break
-    
-    def populate_removal_exempt(self, exempt_string: str) -> None:
-        '''requires the jellyfin ids to already be set'''
-        j = Jellyfin_API()
-        saved_ids = j.get_saved_media_ids(exempt_string)
-        saved_media = saved_ids['parent_media']
-        saved_seasons = saved_ids['seasons']
-        
-        for media in self.movies:
-            if media.jellyfin_id in saved_media:
-                media.removal_exempt = True
-                saved_media.remove(media.jellyfin_id)
-
-        for media in self.shows:
-            if media.jellyfin_id in saved_media:
-                media.removal_exempt = True
-                saved_media.remove(media.jellyfin_id)
-
-                # at least one season must be saved for show to be saved and show must be saved if season
-                found_season = False
-                for season in media.seasons:
-                    if season.jellyfin_id in saved_seasons:
-                        found_season = True
-                        season.removal_exempt = True
-                        saved_seasons.remove(season.jellyfin_id)
-                
-                if found_season == False:
-                    log.exception(f"Show was marked as exempt without any of its seasons: {media.title}")
-                    raise ValueError
-
-        if len(saved_media) > 0 or len(saved_seasons) > 0:
-            log.exception(f"Something was marked exempt but could not be found. Media: {saved_media}, Seasons {saved_seasons}")
-            raise IndexError
 
     def trigger_media_refresh(self, media):
         p = Plex_API()
@@ -377,7 +370,7 @@ class Library():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        # media table - clearerr owns this entirely, drop and rebuild
+        # media table. clearerr owns this entirely, drop and rebuild
         cursor.execute("DROP TABLE IF EXISTS media")
         cursor.execute("""
             CREATE TABLE media (
@@ -401,7 +394,7 @@ class Library():
             )
         """)
 
-        # exempt table - web app owns this, just has to exist
+        # exempt table. web app owns this, just has to exist
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS exempt (
                 rating_key TEXT PRIMARY KEY,
@@ -409,6 +402,14 @@ class Library():
             )
         """)
 
+        # removal table. web app also owns this one
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS removal_queue (
+                rating_key TEXT PRIMARY KEY,
+                queued_at INTEGER
+            )
+        """)
+        
         # write all media
         for movie in self.movies:
             cursor.execute("""
@@ -427,9 +428,13 @@ class Library():
                     INSERT INTO seasons VALUES (?, ?, ?, ?)
                 """, (season.rating_key, show.rating_key, season.ids['tmdb'], season.title))
 
-        # clean up exempt entries for media no longer in library
+        # clean up exempt and removal entries for media no longer in library
         cursor.execute("""
             DELETE FROM exempt WHERE rating_key NOT IN 
+            (SELECT rating_key FROM media)
+        """)
+        cursor.execute("""
+            DELETE FROM removal_queue WHERE rating_key NOT IN 
             (SELECT rating_key FROM media)
         """)
 

@@ -24,6 +24,7 @@ class _Media():
         # use setter. scaled score or -1 for exempt
         self.deletion_score = None
         self.removal_exempt = False
+        self.removal_scheduled = -1
 
     def __str__(self):
         partial = {
@@ -34,12 +35,16 @@ class _Media():
             'last_watched': self.last_watched,
             'size': human_size(self.size),
             'exempt': self.removal_exempt,
+            'remove': self.removal_scheduled,
             'deletion_score': self.deletion_score,
             'poster': self.poster_url
         }
         partial.update(self.ids)
         partial.update({'path': self.path})
         return str(partial)
+    
+    def __repr__(self):
+        return self.__str__()
     
     def __eq__(self, other):
         if not isinstance(other, type(self)):

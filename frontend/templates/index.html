@@ -8,7 +8,6 @@
 </head>
 <body class="p-8 bg-base-200">
     <h1 class="text-3xl font-bold mb-6">Media Library</h1>
-
     <div class="flex gap-4 mb-6">
         <input type="text" placeholder="Search..." 
             class="input input-bordered flex-1"
@@ -17,7 +16,6 @@
             hx-target="#media-grid"
             hx-include="#sort-select"
             name="q">
-
         <select id="sort-select" name="sort" class="select select-bordered"
             hx-get="/search"
             hx-trigger="change"
@@ -27,16 +25,8 @@
             <option value="deletion_score">Sort by: Likelihood of Removal</option>
         </select>
     </div>
-
-    <form method="post" action="/exempt/update">
-        <div id="media-grid">
-            {% include "partials/media_grid.html" %}
-        </div>
-        <div class="fixed bottom-0 left-0 right-0 p-4 bg-base-100 shadow-lg flex justify-end">
-            <button type="submit" class="btn btn-primary">Save Exempt List</button>
-        </div>
-    </form>
-
-
+    <div id="media-grid">
+        {% include "partials/media_grid.html" %}
+    </div>
 </body>
 </html>
