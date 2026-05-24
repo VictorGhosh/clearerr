@@ -4,7 +4,7 @@ goal:
   # IMPORTANT: At the moment this is percentage of the share to leave empty of media. This 
   # has no impact on other files or the file system itself
   free_percentage: 10
-  dry_run: true
+  dry_run: false  
 
 # Each field must be an attribute of the media and will be multiplied by its weight and summed
 # A higher score means less likely to be removed. If an attribute being higher means save it,

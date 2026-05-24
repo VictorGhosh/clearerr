@@ -207,7 +207,7 @@ class Library():
             try:
                 t_last_watched = t_dat['data'][0]['date']
             except IndexError:
-                # tautulli has not record, validate plex agrees otherwise there is a problem
+                # tautulli has no record, validate plex agrees otherwise there is a problem
                 if media.last_watched is not None:
                     log.warning(f"Plex has a watch date but Tautulli does not: {media.title}")
                 return
@@ -215,7 +215,7 @@ class Library():
             if media.last_watched is None or t_last_watched > media.last_watched:
                 media.last_watched = t_last_watched
             elif t_last_watched < media.last_watched:
-                log.warning(f"Plex has a newer watch date than Tautulli: {media.title}")
+                log.warning(f"Plex has a newer watch date than Tautulli: {media.title}, difference: {media.last_watched - t_last_watched}")
 
         for movie in self.movies:
             t_dat = t.get_api_query('get_history', {'rating_key': movie.rating_key})

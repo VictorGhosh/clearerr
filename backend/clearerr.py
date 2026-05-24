@@ -77,7 +77,7 @@ class Actions:
 
         return pl
 
-    def process_user_lists(self, pl: Library, rules) -> bool:
+    def process_user_lists(self, pl: Library, rules: SimpleNamespace) -> bool:
         """Mark user set exemptions and removals in logs and remove if nessesary. Library will be updated
         if anything is removed.
 
@@ -101,10 +101,10 @@ class Actions:
 
         actual_removals = []
         for m in remove_media:
-            if time > m.removal_scheduled + (rules.thresholds.process_scheduled_removal_after_hours * 3600):
+            if time() > m.removal_scheduled + (rules.thresholds.process_scheduled_removal_after_hours * 3600):
                 if rules.goal.dry_run:
-                    log.info(f"Scheduled removal of {m.title} expected, cancled for dry run")
-                    removals_log.info(f"Scheduled removal of {m.title} expected, cancled for dry run")
+                    log.info(f"Scheduled removal of {m.title} expected, canceled for dry run")
+                    removals_log.info(f"Scheduled removal of {m.title} expected, canceled for dry run")
                 else:
                     s = Seerr_API()
                     log.info(f"Removing {m.title} due to schedule...")
@@ -266,14 +266,4 @@ def main():
     # endregion
 
 if __name__ == "__main__":
-    # main()
-
-    def to_namespace(d):
-        if isinstance(d, dict):
-            return SimpleNamespace(**{k: to_namespace(v) for k, v in d.items()})
-        return d
-    
-    with open(config._RULES_PATH) as f:
-        rules = to_namespace(yaml.safe_load(f))
-    
-    print(rules.thresholds)
+    main()
