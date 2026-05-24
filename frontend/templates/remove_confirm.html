@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clearerr</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-base-200 flex justify-center items-center min-h-screen">
+    <div class="card bg-base-100 shadow w-96">
+        <figure><img src="{{ item.poster_url }}" /></figure>
+        <div class="card-body items-center text-center">
+            <h2 class="card-title">{{ item.title }}</h2>
+            {% if item.queued_at %}
+            <p class="text-base-content/70">Cancel removal request for <strong>{{ item.title }}</strong>?</p>
+            {% else %}
+            <p class="text-error font-bold">This will permanently delete this media from your server.</p>
+            <p class="text-base-content/70">Are you sure you want to remove <strong>{{ item.title }}</strong>?</p>
+            {% endif %}
+            <div class="flex gap-4 mt-4">
+                <a href="/" class="btn btn-ghost">Back</a>
+                <form method="post" action="/remove/{{ item.rating_key }}">
+                    <button type="submit" class="btn {% if item.queued_at %}btn-warning{% else %}btn-error{% endif %}">
+                        {% if item.queued_at %}Cancel Removal{% else %}Schedule Removal{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

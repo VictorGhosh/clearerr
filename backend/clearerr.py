@@ -75,10 +75,13 @@ class Actions:
             pl.update_poster_urls()
 
             try:
-                log.info("Updating library with exemption data from database")
+                log.info("Updating library with exemption data from database...")
                 pl.update_exempt_status(config._DB_PATH)
             except:
                 log.error("Failed to update library with exemption data. Expected if db is new")
+
+            log.info("Updating library with scheduled removals from database...")
+            pl.update_removal_scheduled_status(config._DB_PATH)
 
             log.info("Generating media deletion scores...")
             deletion_scoring_rules = rules.ordering
