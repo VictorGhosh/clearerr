@@ -24,11 +24,19 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def obfuscate_email(email: str) -> str:
+    if not email or email == "unknown":
+        return "unknown"
+    local = email.split("@")[0]
+    if len(local) <= 3:
+        return local[0] + "*" * (len(local) - 1)
+    return local[:3] + "*" * (min(len(local) - 5, 5)) + local[-2:]
+
 @app.get("/")
 def index(request: Request):
     conn = get_db()
     media = conn.execute("""
-        SELECT m.*, e.exempted_at, r.queued_at
+        SELECT m.*, e.exempted_at, e.exempted_by, r.queued_at, r.queued_by
         FROM media m
         LEFT JOIN exempt e ON e.rating_key = m.rating_key
         LEFT JOIN removal_queue r ON r.rating_key = m.rating_key
@@ -42,7 +50,7 @@ def search(request: Request, q: str = "", sort: str = "title"):
     conn = get_db()
     order = "title" if sort == "title" else "deletion_score ASC"
     media = conn.execute(f"""
-        SELECT m.*, e.exempted_at, r.queued_at
+        SELECT m.*, e.exempted_at, e.exempted_by, r.queued_at, r.queued_by
         FROM media m
         LEFT JOIN exempt e ON e.rating_key = m.rating_key
         LEFT JOIN removal_queue r ON r.rating_key = m.rating_key
@@ -65,13 +73,14 @@ def exempt_confirm(request: Request, rating_key: str):
     return templates.TemplateResponse(request=request, name="exempt_confirm.html", context={"item": item})
 
 @app.post("/exempt/toggle/{rating_key}")
-def exempt_toggle(rating_key: str):
+def exempt_toggle(request: Request, rating_key: str):
+    user = obfuscate_email(request.headers.get("Cf-Access-Authenticated-User-Email", "unknown"))
     conn = get_db()
     existing = conn.execute("SELECT rating_key FROM exempt WHERE rating_key = ?", (rating_key,)).fetchone()
     if existing:
         conn.execute("DELETE FROM exempt WHERE rating_key = ?", (rating_key,))
     else:
-        conn.execute("INSERT INTO exempt (rating_key, exempted_at) VALUES (?, ?)", (rating_key, int(time.time())))
+        conn.execute("INSERT INTO exempt (rating_key, exempted_at, exempted_by) VALUES (?, ?, ?)", (rating_key, int(time.time()), user))
     conn.commit()
     conn.close()
     from fastapi.responses import RedirectResponse
@@ -91,13 +100,14 @@ def remove_confirm(request: Request, rating_key: str):
     return templates.TemplateResponse(request=request, name="remove_confirm.html", context={"item": item})
 
 @app.post("/remove/{rating_key}")
-def remove_media(rating_key: str):
+def remove_media(request: Request, rating_key: str):
+    user = obfuscate_email(request.headers.get("Cf-Access-Authenticated-User-Email", "unknown"))
     conn = get_db()
     existing = conn.execute("SELECT rating_key FROM removal_queue WHERE rating_key = ?", (rating_key,)).fetchone()
     if existing:
         conn.execute("DELETE FROM removal_queue WHERE rating_key = ?", (rating_key,))
     else:
-        conn.execute("INSERT INTO removal_queue (rating_key, queued_at) VALUES (?, ?)", (rating_key, int(time.time())))
+        conn.execute("INSERT INTO removal_queue (rating_key, queued_at, queued_by) VALUES (?, ?, ?)", (rating_key, int(time.time()), user))    
     conn.commit()
     conn.close()
     from fastapi.responses import RedirectResponse

@@ -9,10 +9,10 @@
                 <div class="card-body p-3 items-center text-center">
                     <h2 class="card-title text-sm">{{ item.title }}</h2>
                     {% if item.exempted_at %}
-                    <span class="text-xs text-base-content/50">Exempt since {{ item.exempted_at | datetimeformat }}</span>
+                    <span class="text-xs text-base-content/50">Exempt by {{ item.exempted_by }} since {{ item.exempted_at | datetimeformat }}</span>
                     {% endif %}
                     {% if item.queued_at %}
-                    <span class="text-xs text-error">Removal requested {{ item.queued_at | datetimeformat }}</span>
+                    <span class="text-xs text-error">Removal requested by {{ item.queued_by }} on {{ item.queued_at | datetimeformat }}</span>
                     {% endif %}
                     <div class="flex justify-between mt-2 w-full">
                         {% if item.queued_at %}
@@ -44,10 +44,10 @@
                 <div class="card-body p-3 items-center text-center">
                     <h2 class="card-title text-sm">{{ item.title }}</h2>
                     {% if item.exempted_at %}
-                    <span class="text-xs text-base-content/50">Exempt since {{ item.exempted_at | datetimeformat }}</span>
+                    <span class="text-xs text-base-content/50">Exempt by {{ item.exempted_by }} since {{ item.exempted_at | datetimeformat }}</span>
                     {% endif %}
                     {% if item.queued_at %}
-                    <span class="text-xs text-error">Removal requested {{ item.queued_at | datetimeformat }}</span>
+                    <span class="text-xs text-error">Removal requested by {{ item.queued_by }} on {{ item.queued_at | datetimeformat }}</span>
                     {% endif %}
                     <div class="flex justify-between mt-2 w-full">
                         {% if item.queued_at %}

@@ -398,6 +398,7 @@ class Library():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS exempt (
                 rating_key TEXT PRIMARY KEY,
+                exempted_by TEXT,
                 exempted_at INTEGER
             )
         """)
@@ -406,6 +407,7 @@ class Library():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS removal_queue (
                 rating_key TEXT PRIMARY KEY,
+                queued_by TEXT,
                 queued_at INTEGER
             )
         """)
