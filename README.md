@@ -57,7 +57,7 @@ The container was built on an unraid system with a segmented macvlan network and
 - [ ] Add logic to not require Tautulli (will require tmdb key as backup for images)
 - [ ] Longer term: test on a non macvlan segmented system
 - [ ] Support for saving and removing seasons (the hold up here is this cannot be done with seerr as my networking topology has it on a separate vlan to Sonarr)
-- [ ] Improve UI; Add "recently deleted" and storage metrics
+- [ ] Improve UI; Add "recently deleted" and storage metrics. Add "requested by" field
 
 
 ## Bugs
