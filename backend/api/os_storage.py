@@ -4,12 +4,13 @@ from pathlib import Path
 from settings.config import config
 log = logging.getLogger(__name__)
 
+# FIXME I don't like the location of this its not an api. Move to util or combine with obj
 class OS_Storage():
 
     def __init__(self, root: str=config._PATH_TO_MEDIA):
         self.root = root
 
-    def get_plex_path(self, path):
+    def get_true_path(self, path):
         '''Given the path provided by the plex api, get the path in the clearerr container.
         _PATH_TO_MEDIA should be assigned to /media and /media should be mapped to the real dir'''
         if path is None:

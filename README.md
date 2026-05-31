@@ -44,22 +44,25 @@ In this iteration the media exemptions are set by a custom built and hosted web 
 
 ### Usage
 
-The container was built on an unraid system with a segmented macvlan network and no os management IP, so accounting for my strict networking topology would be the biggest hurdle for anyone trying use this themselves. However, as long as the api urls in the template are set such that the container has access, everything should work (testing to come). It also requires the media directory have subdirectories for movies and shows. Those directory's names can be set in the template.
+The container was built on unraid and can be added and setup using the template, my-Clearerr.xml. It currently only works if your media library has separate sub-directories for movies and tv shows, as is recommended by most arr guides anyway. You can set the names of these sub-directories in the template as well. The paths provided to Jellyfin and Plex must match exactly in order for validation to pass, again this is already recommended by most guides, i.e.
 
-## Things to add
+Plex: path : /data/media → /mnt/user/data/media/
+Jelly: path : /data/media/tv/ → /mnt/user/data/media/tv/
+Jelly: path : /data/media/movies/ → /mnt/user/data/media/movies/
 
-- [x] Add logic to run initial scan if no db exists (or just when container starts I guess)
-- [ ] Add container path generation for Jellyfin
-- [ ] Add targeted library scan logic for if the validation fails on start
+You can get a TMDB token for free on their website but this will ultimately be an optional backup for fetching image urls if Tautulli becomes unresponsive.
+
+## Future Features
+
+- [ ] Support for saving and removing seasons - this is waiting on me to migrate off my segmented macvlan network as it can only really be via sonarr which I have on a different vlan
+- [x] Improve UI: add "requested by" field
+- [ ] Improve UI: storage metrics and "recently deleted" - most likely be a new page in the UI
 - [ ] Add periodic health checks, especially for less used api connections like Seererr
-- [ ] Migrate to Tautulli for image api instead of direct to tmdb (less WAN calls and fewer accounts needed)
-- [ ] A ways away from not requiring Plex but add logic now to not require Jellyfin (no validation)
-- [ ] Add logic to not require Tautulli (will require tmdb key as backup for images)
-- [ ] Longer term: test on a non macvlan segmented system
-- [ ] Support for saving and removing seasons (the hold up here is this cannot be done with seerr as my networking topology has it on a separate vlan to Sonarr)
-- [ ] Improve UI; Add "recently deleted" and storage metrics. Add "requested by" field
-
+- [ ] Migrate to Tautulli for image api instead of direct to tmdb. We can keep tmdb as a backup - less WAN calls and fewer accounts needed
 
 ## Bugs
 
-- [ ] Jellyfin targeted updates post removal are erroring. Most likely because the paths are incorrect as stated above
+- [ ] Jellyfin targeted updates post removal are erroring but functional
+- [ ] Sonarr removal requests also somtimes reutrn error codes but are functional
+- [x] Possible that tautuli watch data updates are not working for shows or seasons. Logs and comments in that area imply that I left something obvious temporarily that I've since forgotten
+
