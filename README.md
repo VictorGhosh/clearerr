@@ -59,6 +59,7 @@ The container was built on an unraid system with a segmented macvlan network and
 - [ ] Support for saving and removing seasons (the hold up here is this cannot be done with seerr as my networking topology has it on a separate vlan to Sonarr)
 - [x] Improve UI; Add "recently deleted" and add "requested by" field
 - [ ] Improve UI 2.0: storage metrics
+- [ ] Cleanup bloated library object. Move most methods into utls
 
 ## Bugs
 

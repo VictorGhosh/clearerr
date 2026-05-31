@@ -84,9 +84,9 @@ class Library():
                             season.path = p.get_path(c.get('ratingKey'))
 
                             try:
-                                season.size = o.get_size(o.get_plex_path(season.path))
+                                season.size = o.get_size(o.get_true_path(season.path))
                             except:
-                                logging.exception(f"Failed to find file size: {season.title}, {media_obj.title}")
+                                log.error(f"Failed to find file size with plex path: {season.title}, {media_obj.title}")
 
                             for i in c.get('Guid'):
                                 id = i.get('id')
@@ -107,9 +107,9 @@ class Library():
                     media_obj.path = p.get_path(media.get('ratingKey'))
 
                     try:
-                        media_obj.size = o.get_size(o.get_plex_path(media_obj.path))
+                        media_obj.size = o.get_size(o.get_true_path(media_obj.path))
                     except:
-                        logging.exception(f"Failed to find file size: {media_obj.title}")
+                        logging.exception(f"Failed to find file size with plex: {media_obj.title}")
 
 
                     for i in media.get('Guid'):
@@ -147,18 +147,12 @@ class Library():
                         media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
                                          'tmdb': media.get('ProviderIds').get('Tmdb')}
                         media_obj.jellyfin_id = media.get('Id')
-
-                        # FIXME: Container path creation currently only works for plex
-                        # try:
-                        #     media_obj.size = o.get_size(media.get('Path'))
-                        # except:
-                        #     log.exception(f"Failed to find file size: {media_obj.title}")
-
                         self.movies.append(media_obj)
 
                     elif lib_type == 'Shows':
                         if media['Type'] == 'Series':
                             media_obj = Show(media['Name'])
+                            media_obj.path = media.get('Path')
                             media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
                                              'tmdb': media.get('ProviderIds').get('Tmdb'),
                                              'tvdb': media.get('ProviderIds').get('Tvdb')}
@@ -167,6 +161,12 @@ class Library():
                         
                         elif media['Type'] == 'Season':
                             season_data.append(media)
+                    
+                    # Both movies and shows
+                    try:
+                        media_obj.size = o.get_size(o.get_true_path(media_obj.path))
+                    except:
+                        log.error(f"Failed to find file size with jellyfin path: {media_obj.title}")
 
             # After basic parsing add seasons to series, they seem to come after the show but to be safe I am doing seperate
             for season in season_data:
@@ -192,11 +192,10 @@ class Library():
                 season_obj.ids = {'tvdb': season.get('ProviderIds').get('Tvdb')}
                 season_obj.jellyfin_id = season.get('Id')
 
-                # FIXME: Fix pathing for jellyfin. currently only works for plex
-                # try:
-                #     season_obj.size = o.get_size(season.get('Path'))
-                # except:
-                #     logging.exception(f"Failed to find file size: {season_obj.title}, {parent_obj.title}")
+                try:
+                    season_obj.size = o.get_size(o.get_true_path(season_obj.path))
+                except:
+                    log.error(f"Failed to find file size with plex path: {season_obj.title}, {parent_obj.title}")
 
                 parent_obj.seasons.append(season_obj)
 
@@ -205,24 +204,24 @@ class Library():
         
         def update_from_tautulli_helper(media, t_dat) -> None:
             try:
-                t_last_watched = t_dat['data'][0]['date']
+                t_last_watched = t_dat['data'][0]['started'] # was date before started
             except IndexError:
                 # tautulli has no record, validate plex agrees otherwise there is a problem
                 if media.last_watched is not None:
                     log.warning(f"Plex has a watch date but Tautulli does not: {media.title}")
                 return
 
+            BUFFER_SECONDS = 7200 
+
             if media.last_watched is None or t_last_watched > media.last_watched:
                 media.last_watched = t_last_watched
-            elif t_last_watched < media.last_watched:
-                log.warning(f"Plex has a newer watch date than Tautulli: {media.title}, difference: {media.last_watched - t_last_watched}")
+            elif t_last_watched < (media.last_watched - BUFFER_SECONDS):
+                log.warning(f"Plex has a significantly newer watch date than Tautulli: {media.title}, difference: {media.last_watched - t_last_watched}s")
 
         for movie in self.movies:
             t_dat = t.get_api_query('get_history', {'rating_key': movie.rating_key})
             update_from_tautulli_helper(movie, t_dat)
             
-
-        # FIXME: For SHOW IS NOT WORKING RIGHT NOW
         for show in self.shows:
             t_show_dat = t.get_api_query('get_history', {'grandparent_rating_key': show.rating_key})
             update_from_tautulli_helper(show, t_show_dat)
