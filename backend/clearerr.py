@@ -13,8 +13,8 @@ from .obj.storage_obj import Storage
 
 from settings.config import config
 
-from .util.db_handler import DB_Handler
-from .util.log_init import setup_logging
+from .util.db_util import DB_Handler
+from .util.log_util import setup_logging
 setup_logging(config)
 log = logging.getLogger(__name__)
 removals_log = logging.getLogger("removals")

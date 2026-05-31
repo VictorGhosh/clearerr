@@ -29,18 +29,18 @@ class _Media():
     def __str__(self):
         partial = {
             'title': self.title,
-            # 'rating_key': self.rating_key,
-            # 'jellyfin_id': self.jellyfin_id,
+            'rating_key': self.rating_key,
+            'jellyfin_id': self.jellyfin_id,
             'added': self.added_on,
             'last_watched': self.last_watched,
-            # 'size': human_size(self.size),
-            # 'exempt': self.removal_exempt,
-            # 'remove': self.removal_scheduled,
-            # 'deletion_score': self.deletion_score,
-            # 'poster': self.poster_url
+            'size': human_size(self.size),
+            'exempt': self.removal_exempt,
+            'remove': self.removal_scheduled,
+            'deletion_score': self.deletion_score,
+            'poster': self.poster_url
         }
-        # partial.update(self.ids)
-        # partial.update({'path': self.path})
+        partial.update(self.ids)
+        partial.update({'path': self.path})
         return str(partial)
     
     def __repr__(self):
@@ -50,6 +50,7 @@ class _Media():
         if not isinstance(other, type(self)):
             return False
 
+        # FIXME: path gen has been fixed so this can be simplified.
         # Only end of paths can match because of the containers root naming. oops
         if self.path and other.path:
             tail_a = '/'.join(self.path.split('/')[-2:])

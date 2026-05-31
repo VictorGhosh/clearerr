@@ -45,23 +45,3 @@ In this iteration the media exemptions are set by a custom built and hosted web 
 ### Usage
 
 The container was built on an unraid system with a segmented macvlan network and no os management IP, so accounting for my strict networking topology would be the biggest hurdle for anyone trying use this themselves. However, as long as the api urls in the template are set such that the container has access, everything should work (testing to come). It also requires the media directory have subdirectories for movies and shows. Those directory's names can be set in the template.
-
-## To Do
-
-- [x] Add logic to run initial scan if no db exists (or just when container starts I guess)
-- [ ] Add container path generation for Jellyfin
-- [ ] Add targeted library scan logic for if the validation fails on start
-- [ ] Add periodic health checks, especially for less used api connections like Seererr
-- [ ] Migrate to Tautulli for image api instead of direct to tmdb (less WAN calls and fewer accounts needed)
-- [ ] A ways away from not requiring Plex but add logic now to not require Jellyfin (no validation)
-- [ ] Add logic to not require Tautulli (will require tmdb key as backup for images)
-- [ ] Longer term: test on a non macvlan segmented system
-- [ ] Support for saving and removing seasons (the hold up here is this cannot be done with seerr as my networking topology has it on a separate vlan to Sonarr)
-- [x] Improve UI; Add "recently deleted" and add "requested by" field
-- [ ] Improve UI 2.0: storage metrics
-- [ ] Cleanup bloated library object. Move most methods into utls
-
-## Bugs
-
-- [ ] Jellyfin targeted updates post removal are erroring. Most likely because the paths are incorrect as stated above
-- [ ] Possible that tautuli watch data updates are not working for shows or seasons. Logs and comments in that area imply that I left something obvious temporarily that I've since forgotten
