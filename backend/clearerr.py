@@ -1,17 +1,20 @@
 import sys
 import logging
-import shutil
 import yaml
 
 from time import sleep, time
 from types import SimpleNamespace
 
-from .api.os_storage import *
+from .api.os_storage import human_size  # TODO: this should be in storage_obj
 from .api.seerr_api import Seerr_API
+
 from .obj.library_obj import Library
+from .obj.storage_obj import Storage
+
 from settings.config import config
 
-from .log_setup import setup_logging
+from .util.db_handler import DB_Handler
+from .util.log_init import setup_logging
 setup_logging(config)
 log = logging.getLogger(__name__)
 removals_log = logging.getLogger("removals")
@@ -20,7 +23,7 @@ exemptions_log = logging.getLogger("exemptions")
 log.info("Required pyhton libraries loaded")
 
 class Actions:
-    def full_build_lib(self) -> Library:
+    def full_build_lib() -> Library:
 
         # Cant pull this from below because this action is run when db is missing i.e. on its own
         def to_namespace(d):
@@ -73,11 +76,11 @@ class Actions:
         log.debug(pl)
              
         log.info("Library object generation complete. Writing to database")
-        pl.write_to_sqlite(config._DB_PATH)
+        DB_Handler.write_to_sqlite(pl, config._DB_PATH)
 
         return pl
 
-    def process_user_lists(self, pl: Library, rules: SimpleNamespace) -> bool:
+    def process_user_lists(pl: Library, rules: SimpleNamespace) -> bool:
         """Mark user set exemptions and removals in logs and remove if nessesary. Library will be updated
         if anything is removed.
 
@@ -135,6 +138,113 @@ class Actions:
             return True
         return False
 
+    def process_storage_needs(rules: SimpleNamespace) -> tuple[int, Library]:
+        s = Storage()
+
+        # get library sizes from os
+        ls, ms, ss = human_size(s.lib_size), human_size(s.movies_size), human_size(s.shows_size)
+        log.info(f"Calculated library sizes: Total: {ls}, Movies: {ms}, Shows: {ss}")
+
+        # get share/array stats from shutil. these will be more accurate to os including file system
+        st, su, sf = human_size(s.share_total), human_size(s.share_used), human_size(s.share_free) 
+        log.info(f"Calculated share data: Total: {st}, Used: {su}, Free: {sf}")
+
+        # share will be larger than lib but if by too much there may be a leak so alert
+        if abs(int(s.share_used) - s.lib_size) > (rules.thresholds.notify_if_lib_size_dif_larger_than_gb * 1024 ** 3):
+            log.warning("Library size and share usage difference exceeded threshold. Please investigate possible leak")
+
+        # Here use share data as usage because its larger.
+        target_free = rules.goal.free_percentage * 0.01 * s.share_total
+
+        # if target works out to be too low, alert
+        threshold_free_space = rules.thresholds.notify_if_target_free_space_below_gb * 1024 ** 3
+        if (target_free < threshold_free_space):
+            log.warning(f"Target free space ({human_size(target_free)}) is below threshold ({human_size(threshold_free_space)})")
+
+        if (target_free < s.share_free):
+            log.info(f"Free space on share ({sf}) is greater than the target ({human_size(target_free)})")
+            log.info(f"No action - We're done!")
+            sys.exit(0)
+        else:
+            log.info(f"Free space on share ({sf}) is less than the target ({human_size(target_free)})")
+
+        clear_target = target_free - s.share_free
+        if clear_target <= 0:
+            log.error("Something has gone very wrong, we aim to clear negative space")
+            raise ValueError
+        log.info(f"Attempting to clear approximately {human_size(clear_target)}s of media")
+        if rules.goal.dry_run:
+            log.info(f"Dry run is enabled, nothing will be removed")
+        return clear_target, s
+
+    def media_selection(pl: Library, clear_target: int) -> list:
+        combined_lib = pl.movies + pl.shows
+        combined_lib.sort(key=lambda x: x.deletion_score, reverse=False)
+
+        combined_lib_str = f'Media ({len(combined_lib)} total):\n'
+        for m in combined_lib:
+            combined_lib_str += f'{str(m)}\n'
+        log.debug(f"Sorted library: {combined_lib_str.rstrip()}")
+
+        selected = []
+        sum_selected = 0
+        for media in combined_lib:
+            selected.append(media)
+            sum_selected += media.size
+
+            if sum_selected >= clear_target: 
+                break
+
+        selected_str = f'Media ({len(selected)} total):\n'
+        for m in selected:
+            selected_str += f'{str(m)}\n'
+        log.info(f"Selected for removal ({human_size(sum_selected)}) {selected_str.rstrip()}")
+
+        return selected
+    
+    def removal_and_validation(pl: Library, selected: list, rules: SimpleNamespace) -> None:
+        if rules.goal.dry_run:
+            log.info(f"Dry run is enabled, stopping here") 
+            sys.exit(0)
+
+        s = Seerr_API()
+        for media in selected:
+            log.info(f"Removing {media.title}...")
+            seerr_item = s.find_by_external_id(media.rating_key, media.ids)
+            s.delete_media(seerr_item['id'])
+
+        # Validation
+        log.info("Triggering focused library updates for removed media...")
+        for media in selected:
+            pl.trigger_media_refresh(media)
+
+        log.info("Waiting 30 seconds for refreshes to complete...")
+        sleep(30)
+
+        log.info("Rebuilding library model from Plex....")
+        pl2 = Library()
+        pl2.build_from_plex()
+        log.debug(pl)
+
+        removed = [m for m in selected if m in pl2.movies + pl2.shows]
+        if removed:
+            log.error(f"Media still present after deletion: {[m.title for m in removed]}")
+        else:
+            log.info("All targeted media removal validated")
+
+    def process_storage_results(s: Storage) -> None:
+        s2 = Storage()
+
+        ls2, ms2, ss2 = human_size(s2.lib_size), human_size(s2.movies_size), human_size(s2.shows_size)
+        log.info(f"Calculated library sizes: Total: {ls2}, Movies: {ms2}, Shows: {ss2}")
+        log.info(f"{human_size(s.lib_size - s2.lib_size)}s Cleared - os walk")
+    
+        # get share/array stats from shutil. these will be more accurate to os including file system
+        st2, su2, sf2 = human_size(s2.share_total), human_size(s2.share_used), human_size(s2.share_free) 
+        log.info(f"Calculated share data: Total: {st2}, Used: {su2}, Free: {sf2}")
+        log.info(f"{human_size(s.share_used - s2.share_used)}s Cleared - share")
+        log.info(f"We're done!")
+
 def main():
     def to_namespace(d):
         if isinstance(d, dict):
@@ -144,126 +254,23 @@ def main():
     with open(config._RULES_PATH) as f:
         rules = to_namespace(yaml.safe_load(f))
 
-    # region 1: Library building
-    pl = Actions().full_build_lib()
-    # endregion
+    # Build and validate library
+    pl = Actions.full_build_lib()
 
-    if Actions().process_user_lists(pl, rules):
-        pl = Actions().full_build_lib()
+    # Update library with front end data
+    if Actions.process_user_lists(pl, rules):
+        pl = Actions.full_build_lib()
 
-    # region 3: Storage check
-    o = OS_Storage()
-    
-    # get library sizes from os
-    movies_size = o.get_size(config._PATH_TO_MEDIA + config.MOVIE_DIR)
-    shows_size = o.get_size(config._PATH_TO_MEDIA + config.SHOWS_DIR)
-    lib_size = movies_size + shows_size
-    ls, ms, ss = human_size(lib_size), human_size(movies_size), human_size(shows_size)
-    log.info(f"Calculated library sizes: Total: {ls}, Movies: {ms}, Shows: {ss}")
+    # Set target or stop if no removal needed
+    clear_target, s = Actions.process_storage_needs(rules)
 
-    # get share/array stats from shutil. these will be more accurate to os including file system
-    share_total, share_used, share_free = shutil.disk_usage(config._PATH_TO_MEDIA)
-    st, su, sf = human_size(share_total), human_size(share_used), human_size(share_free) 
-    log.info(f"Calculated share data: Total: {st}, Used: {su}, Free: {sf}")
+    # Select removal items
+    selected = Actions.media_selection(pl, clear_target)
 
-    # share will be larger than lib but if by too much there may be a leak so alert
-    if abs(int(share_used) - lib_size) > (rules.thresholds.notify_if_lib_size_dif_larger_than_gb * 1024 ** 3):
-        log.warning("Library size and share usage difference exceeded threshold. Please investigate possible leak")
+    # Remove selected items and validate their removal
+    Actions.removal_and_validation(pl, selected, rules)
 
-    # NOTE: Here I will use share data as usage because its larger.
-    target_free = rules.goal.free_percentage * 0.01 * share_total
-
-    # if target works out to be too low, alert
-    threshold_free_space = rules.thresholds.notify_if_target_free_space_below_gb * 1024 ** 3
-    if (target_free < threshold_free_space):
-        log.warning(f"Target free space ({human_size(target_free)}) is below threshold ({human_size(threshold_free_space)})")
-
-    if (target_free < share_free):
-        log.info(f"Free space on share ({sf}) is greater than the target ({human_size(target_free)})")
-        log.info(f"No action - We're done!")
-        sys.exit(0)
-    else:
-        log.info(f"Free space on share ({sf}) is less than the target ({human_size(target_free)})")
-
-    clear_target = target_free - share_free
-    if clear_target <= 0:
-        log.error("Something has gone very wrong, we aim to clear negative space")
-        raise ValueError
-    log.info(f"Attempting to clear approximately {human_size(clear_target)}s of media")
-    if rules.goal.dry_run:
-        log.info(f"Dry run is enabled, nothing will be removed")
-    # endregion
-
-    # region 4: Media selection
-    combined_lib = pl.movies + pl.shows
-    combined_lib.sort(key=lambda x: x.deletion_score, reverse=False)
-
-    combined_lib_str = f'Media ({len(combined_lib)} total):\n'
-    for m in combined_lib:
-        combined_lib_str += f'{str(m)}\n'
-    log.debug(f"Sorted library: {combined_lib_str.rstrip()}")
-
-    selected = []
-    sum_selected = 0
-    for media in combined_lib:
-        selected.append(media)
-        sum_selected += media.size
-
-        if sum_selected >= clear_target: 
-            break
-
-    selected_str = f'Media ({len(selected)} total):\n'
-    for m in selected:
-        selected_str += f'{str(m)}\n'
-    log.info(f"Selected for removal ({human_size(sum_selected)}) {selected_str.rstrip()}")
-    # endregion
-
-    # region 5: Media removal
-    if rules.goal.dry_run:
-        log.info(f"Dry run is enabled, stopping here") 
-        sys.exit(0)
-
-    s = Seerr_API()
-    for media in selected:
-        log.info(f"Removing {media.title}...")
-        seerr_item = s.find_by_external_id(media.rating_key, media.ids)
-        s.delete_media(seerr_item['id'])
-    # endregion 
-
-    # region 6: Removal validation
-    log.info("Triggering focused library updates for removed media...")
-    for media in selected:
-        pl.trigger_media_refresh(media)
-
-    log.info("Waiting 30 seconds for refreshes to complete...")
-    sleep(30)
-
-    log.info("Rebuilding library model from Plex....")
-    pl2 = Library()
-    pl2.build_from_plex()
-    log.debug(pl)
-    
-    removed = [m for m in selected if m in pl2.movies + pl2.shows]
-    if removed:
-        log.error(f"Media still present after deletion: {[m.title for m in removed]}")
-    else:
-        log.info("All targeted media removal validated")
-
-    # Recalculating from section 3
-    movies_size2 = o.get_size(config._PATH_TO_MEDIA + config.MOVIE_DIR)
-    shows_size2 = o.get_size(config._PATH_TO_MEDIA + config.SHOWS_DIR)
-    lib_size2 = movies_size2 + shows_size2
-    ls2, ms2, ss2 = human_size(lib_size2), human_size(movies_size2), human_size(shows_size2)
-    log.info(f"Calculated library sizes: Total: {ls2}, Movies: {ms2}, Shows: {ss2}")
-    log.info(f"{human_size(lib_size - lib_size2)}s Cleared - os walk")
-
-    # get share/array stats from shutil. these will be more accurate to os including file system
-    share_total2, share_used2, share_free2 = shutil.disk_usage(config._PATH_TO_MEDIA)
-    st2, su2, sf2 = human_size(share_total2), human_size(share_used2), human_size(share_free2) 
-    log.info(f"Calculated share data: Total: {st2}, Used: {su2}, Free: {sf2}")
-    log.info(f"{human_size(share_used - share_used2)}s Cleared - share")
-    log.info(f"We're done!")
-    # endregion
+    Actions.process_storage_results(s)
 
 if __name__ == "__main__":
     main()

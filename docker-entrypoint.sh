@@ -16,7 +16,7 @@ done
 DB_PATH=$(python3 -c "from settings.config import config; print(config._DB_PATH)")
 if [ ! -s "$DB_PATH" ]; then
     echo "Database not found. Initializing..." >&2
-    python3 -u -c "from backend.clearerr import Actions; Actions().full_build_lib()"
+    python3 -u -c "from backend.clearerr import Actions; Actions.full_build_lib()"
 else
     echo "Database exists. Skipping initialization."
 fi
