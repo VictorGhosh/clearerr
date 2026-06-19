@@ -127,7 +127,7 @@ class Actions:
             log.info("Rebuilding library model from Plex....")
             pl2 = Library()
             pl2.build_from_plex()
-            log.debug(pl)
+            log.debug(pl2)
 
             removed = [m for m in actual_removals if m in pl2.movies + pl2.shows]
             if removed:
@@ -224,8 +224,9 @@ class Actions:
         log.info("Rebuilding library model from Plex....")
         pl2 = Library()
         pl2.build_from_plex()
-        log.debug(pl)
+        log.debug(pl2)
 
+        # confusing but removed is things that were not removed. sorry idk why I did tha
         removed = [m for m in selected if m in pl2.movies + pl2.shows]
         if removed:
             log.error(f"Media still present after deletion: {[m.title for m in removed]}")
