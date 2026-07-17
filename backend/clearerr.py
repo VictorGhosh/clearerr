@@ -226,7 +226,7 @@ class Actions:
         pl2.build_from_plex()
         log.debug(pl2)
 
-        # confusing but removed is things that were not removed. sorry idk why I did tha
+        # confusing but removed is things that were not removed. sorry idk why I did thta
         removed = [m for m in selected if m in pl2.movies + pl2.shows]
         if removed:
             log.error(f"Media still present after deletion: {[m.title for m in removed]}")

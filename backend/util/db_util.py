@@ -56,19 +56,19 @@ class DB_Handler:
         for movie in l.movies:
             cursor.execute("""
                 INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
-            """, (movie.rating_key, movie.ids['tmdb'], movie.title, 'movie', movie.deletion_score,
+            """, (movie.rating_key, movie.ids.get('tmdb'), movie.title, 'movie', movie.deletion_score,
                     movie.poster_url))
 
         for show in l.shows:
             cursor.execute("""
                 INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
-            """, (show.rating_key, show.ids['tmdb'], show.title, 'show', show.deletion_score,
+            """, (show.rating_key, show.ids.get('tmdb'), show.title, 'show', show.deletion_score,
                     show.poster_url))
 
             for season in show.seasons:
                 cursor.execute("""
                     INSERT INTO seasons VALUES (?, ?, ?, ?)
-                """, (season.rating_key, show.rating_key, season.ids['tmdb'], season.title))
+                """, (season.rating_key, show.rating_key, season.ids.get('tmdb'), season.title))
 
         # clean up exempt and removal entries for media no longer in library
         cursor.execute("""
