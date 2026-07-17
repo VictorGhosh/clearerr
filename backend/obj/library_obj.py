@@ -233,19 +233,21 @@ class Library():
     def update_poster_urls(self) -> None:
         t = Tmdb_API()
 
+        def resolve_poster(item, media_type: str) -> str | None:
+            poster = None
+            if item.ids.get('tmdb'):
+                poster = t.get_poster_url(item.ids.get('tmdb'), media_type)
+            if not poster and item.ids.get('imdb'):
+                poster = t.get_poster_url_by_imdb(item.ids.get('imdb'), media_type)
+            if not poster:
+                log.error(f"Failed to get poster via tmdb or imdb id: {item.title}")
+            return poster
+
         for movie in self.movies:
-            # We need tmdb for the posters
-            if not movie.ids.get('tmdb'):
-                log.error(f"Failed to get tmdb id: {movie.title}")
-            else:
-                movie.poster_url = t.get_poster_url(movie.ids.get('tmdb'), 'movie')
+            movie.poster_url = resolve_poster(movie, 'movie')
 
         for show in self.shows:
-            # We need tmdb for the posters
-            if not show.ids.get('tmdb'):
-                log.error(f"Failed to get tmdb id: {show.title}")
-            else:
-                show.poster_url = t.get_poster_url(show.ids.get('tmdb'), 'tv')
+            show.poster_url = resolve_poster(show, 'tv')
 
     def update_exempt_status(self, db_path: str) -> None:
         try:

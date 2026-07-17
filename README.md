@@ -59,10 +59,13 @@ You can get a TMDB token for free on their website but this will ultimately be a
 - [ ] Improve UI: storage metrics and "recently deleted" - most likely be a new page in the UI
 - [ ] Add periodic health checks, especially for less used api connections like Seererr
 - [ ] Migrate to Tautulli for image api instead of direct to tmdb. We can keep tmdb as a backup - less WAN calls and fewer accounts needed
+- [ ] to_namespace to a shared util clean up the Actions class (no duplicate to_namespace)
+- [ ] Replace sys.exit in process_storage_needs with a return so the function is reusable and testable
 
 ## Bugs
 
 - [ ] Jellyfin targeted updates post removal are erroring but functional
 - [ ] Sonarr removal requests also somtimes reutrn error codes but are functional
 - [x] Possible that tautuli watch data updates are not working for shows or seasons. Logs and comments in that area imply that I left something obvious temporarily that I've since forgotten
-
+- [ ] remove broad except: clauses in clearerr.py and library_obj.py
+- [ ] SQLite race condition: backend drops and recreates the media table while the frontend serves queries against it
