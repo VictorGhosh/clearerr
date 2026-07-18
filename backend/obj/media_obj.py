@@ -6,25 +6,25 @@ class _Media():
     def __init__(self, title: str):
         self.title = title
         
-        self.library_key = None
-        self.path = None
-        self.size = None
+        self.library_key: int | None = None
+        self.path: str | None = None
+        self.size: float | None = None
 
         # IDs
-        self.rating_key = None # Plex apps
-        self.jellyfin_id = None
-        self.ids = {} # at least tmdb and tvdb
+        self.rating_key: int | str | None = None # Plex apps
+        self.jellyfin_id: str | None = None
+        self.ids: dict = {} # at least tmdb and tvdb
 
-        self.poster_url = None
+        self.poster_url: str | None = None
 
         # watch data
-        self.added_on = None
-        self.last_watched = None
+        self.added_on: int | None = None
+        self.last_watched: int | None = None
 
         # use setter. scaled score or -1 for exempt
-        self.deletion_score = None
-        self.removal_exempt = False
-        self.removal_scheduled = -1
+        self.deletion_score: float | None = None
+        self.removal_exempt: bool = False
+        self.removal_scheduled: int = -1
 
     def __str__(self):
         partial = {

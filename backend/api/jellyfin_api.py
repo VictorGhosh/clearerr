@@ -1,5 +1,4 @@
 import requests
-import json
 from settings.config import config
 import logging
 log = logging.getLogger(__name__)
@@ -14,7 +13,7 @@ class Jellyfin_API:
             "Content-Type": "application/json"
         }
 
-    def _get_resp(self, endpoint, params=None) -> json:
+    def _get_resp(self, endpoint, params=None) -> dict | None:
         url = f"{self.base_url}{endpoint}"
         
         try:
@@ -35,7 +34,7 @@ class Jellyfin_API:
             log.error(f"Error making Jellyfin POST request: {e}")
             return False
 
-    def get_api_query(self, query, params={}) -> json:
+    def get_api_query(self, query, params={}) -> dict | None:
         query = query.strip().lower()
 
         match query:
@@ -87,16 +86,26 @@ class Jellyfin_API:
         saved_parents = []
         saved_seasons = []
     
-        for user in self.get_api_query("users"):
+        users = self.get_api_query("users")
+        if users is None:
+            log.error("Failed to fetch Jellyfin users")
+            return {'parent_media': [], 'seasons': []}
+
+        for user in users:
             user_items = self.get_api_query('user/items', {'user_id': user['Id']})
+            if user_items is None:
+                continue
             found = False
-            
+
             for item in user_items["Items"]:
                 if  exempt_string in item["Name"].lower().strip() and item['Id'] not in found_lists:
                     found_lists.append(item['Id'])
                     log.info(f"Found target target list: User: {user['Name']}, Name \"{item['Name']}\", ID: {item['Id']}")
-    
-                    for media in self.get_api_query('playlist/items', {'playlist_id': item['Id'], 'user_id': user['Id']})['Items']:
+
+                    playlist_items = self.get_api_query('playlist/items', {'playlist_id': item['Id'], 'user_id': user['Id']})
+                    if playlist_items is None:
+                        continue
+                    for media in playlist_items['Items']:
                         
                         # If it has a season Id its show otherwise it is a movie
                         saved_item = media.get('SeasonId')

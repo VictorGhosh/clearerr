@@ -10,13 +10,15 @@ class Seerr_API:
     it work even though the seasons do have their own seerr ids.'''
 
     def __init__(self, base_url=config.SEERR_URL, api_key=config.SEERR_KEY):
+        if not base_url:
+            raise ValueError("SEERR_URL is not set")
         self.base_url = base_url + "/api/v1"
         self.headers = {
             "X-Api-Key": api_key,
             "Content-Type": "application/json"
         }
 
-    def _get_resp(self, endpoint, params=None) -> json:
+    def _get_resp(self, endpoint, params=None) -> dict | None:
         url = f"{self.base_url}{endpoint}"
 
         try:
@@ -43,7 +45,7 @@ class Seerr_API:
             log.error(f"Error making Seerr DELETE request: {e}")
             return False
 
-    def get_api_query(self, query, params={}) -> json:
+    def get_api_query(self, query, params={}) -> dict | None:
         query = query.strip().lower()
         match query:
             case 'get_media':

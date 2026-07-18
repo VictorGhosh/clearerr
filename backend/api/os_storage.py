@@ -30,11 +30,10 @@ class OS_Storage():
             for f in files
         ) if os.path.isdir(path) else os.path.getsize(path)
 
-def human_size(size_bytes: int) -> str | None:
+def human_size(size_bytes: float | None) -> str | None:
+    if size_bytes is None:
+        return None
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        try:
-            if size_bytes < 1024:
-                return f"{size_bytes:.2f} {unit}"
-        except TypeError:
-            return None
+        if size_bytes < 1024:
+            return f"{size_bytes:.2f} {unit}"
         size_bytes /= 1024

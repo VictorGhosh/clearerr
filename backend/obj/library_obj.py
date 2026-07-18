@@ -61,11 +61,21 @@ class Library():
         p = Plex_API()
         o = OS_Storage()
 
-        for lib in p.get_api_query('get_libraries')['Directory']:
+        libraries = p.get_api_query('get_libraries')
+        if not isinstance(libraries, dict):
+            log.error("Failed to fetch Plex libraries")
+            raise ValueError("Failed to fetch Plex libraries")
+
+        for lib in libraries['Directory']:
             lib_type = lib['title']
 
             if lib_type == 'Movies' or lib_type == 'TV Shows':
-                for media in p.get_api_query('get_library_items', {'section_id': lib['key']}):
+                media_items = p.get_api_query('get_library_items', {'section_id': lib['key']})
+                if not isinstance(media_items, list):
+                    log.error(f"Failed to fetch Plex library items for section {lib['key']}")
+                    continue
+
+                for media in media_items:
 
                     if lib_type == 'Movies':
                         media_obj = Movie(media['title'])
@@ -74,7 +84,12 @@ class Library():
                     elif lib['title'] == 'TV Shows':
                         media_obj = Show(media['title'])
 
-                        for c in p.get_api_query('get_children', {'rating_key': media['ratingKey']}):
+                        children = p.get_api_query('get_children', {'rating_key': media['ratingKey']})
+                        if not isinstance(children, list):
+                            log.error(f"Failed to fetch Plex children for {media['title']}")
+                            children = []
+
+                        for c in children:
                             season = Season(c['title'])
 
                             season.rating_key = c.get('ratingKey')
@@ -88,7 +103,7 @@ class Library():
                             except:
                                 log.error(f"Failed to find file size with plex path: {season.title}, {media_obj.title}")
 
-                            for i in c.get('Guid'):
+                            for i in c.get('Guid') or []:
                                 id = i.get('id')
                                 if id.startswith('tmdb://'):
                                     season.ids['tmdb'] = id.split('tmdb://')[-1]
@@ -112,7 +127,7 @@ class Library():
                         logging.exception(f"Failed to find file size with plex: {media_obj.title}")
 
 
-                    for i in media.get('Guid'):
+                    for i in media.get('Guid') or []:
                         id = i.get('id')
                         if id.startswith('tmdb://'):
                             media_obj.ids['tmdb'] = id.split('tmdb://')[-1]
@@ -133,19 +148,30 @@ class Library():
         j = Jellyfin_API()
         o = OS_Storage()
 
-        for vf in j.get_api_query('VirtualFolders'):
+        vfs = j.get_api_query('VirtualFolders')
+        if not vfs:
+            log.error("Failed to fetch Jellyfin virtual folders")
+            raise ValueError("Failed to fetch Jellyfin virtual folders")
+
+        for vf in vfs:
 
             lib_type = vf['Name']
 
             season_data = []
 
             if lib_type == 'Movies' or lib_type == 'Shows':
-                for media in j.get_api_query('items', {'parent_id': vf['ItemId']})['Items']:
+                resp = j.get_api_query('items', {'parent_id': vf['ItemId']})
+                if not isinstance(resp, dict):
+                    log.error(f"Failed to fetch Jellyfin items for {vf.get('Name')}")
+                    continue
+
+                for media in resp['Items']:
                     if lib_type == 'Movies':
                         media_obj = Movie(media['Name'])
                         media_obj.path = media.get('Path')
-                        media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
-                                         'tmdb': media.get('ProviderIds').get('Tmdb')}
+                        provider_ids = media.get('ProviderIds') or {}
+                        media_obj.ids = {'imdb': provider_ids.get('Imdb'),
+                                         'tmdb': provider_ids.get('Tmdb')}
                         media_obj.jellyfin_id = media.get('Id')
                         self.movies.append(media_obj)
 
@@ -153,9 +179,10 @@ class Library():
                         if media['Type'] == 'Series':
                             media_obj = Show(media['Name'])
                             media_obj.path = media.get('Path')
-                            media_obj.ids = {'imdb': media.get('ProviderIds').get('Imdb'),
-                                             'tmdb': media.get('ProviderIds').get('Tmdb'),
-                                             'tvdb': media.get('ProviderIds').get('Tvdb')}
+                            provider_ids = media.get('ProviderIds') or {}
+                            media_obj.ids = {'imdb': provider_ids.get('Imdb'),
+                                             'tmdb': provider_ids.get('Tmdb'),
+                                             'tvdb': provider_ids.get('Tvdb')}
                             media_obj.jellyfin_id = media.get('Id')
                             self.shows.append(media_obj)
                         
@@ -189,7 +216,7 @@ class Library():
                 
                 season_obj = Season(season['Name'])
                 season_obj.path = season.get('Path')
-                season_obj.ids = {'tvdb': season.get('ProviderIds').get('Tvdb')}
+                season_obj.ids = {'tvdb': (season.get('ProviderIds') or {}).get('Tvdb')}
                 season_obj.jellyfin_id = season.get('Id')
 
                 try:
@@ -205,7 +232,7 @@ class Library():
         def update_from_tautulli_helper(media, t_dat) -> None:
             try:
                 t_last_watched = t_dat['data'][0]['started'] # was date before started
-            except IndexError:
+            except (IndexError, TypeError):
                 # tautulli has no record, validate plex agrees otherwise there is a problem
                 if media.last_watched is not None:
                     log.warning(f"Plex has a watch date but Tautulli does not: {media.title}")

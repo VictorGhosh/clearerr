@@ -6,6 +6,7 @@ log = logging.getLogger(__name__)
 
 class DB_Handler:
 
+    @staticmethod
     def write_to_sqlite(l: Library, db_path: str) -> None:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
