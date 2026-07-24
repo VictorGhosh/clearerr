@@ -6,6 +6,9 @@ import time
 from pathlib import Path
 from datetime import datetime
 
+from backend.api.os_storage import human_size, OS_Storage
+from settings.config import config
+
 BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI()
@@ -16,11 +19,10 @@ def datetimeformat(value):
     return datetime.fromtimestamp(value).strftime("%m-%d-%y")
 
 templates.env.filters["datetimeformat"] = datetimeformat
+templates.env.filters["humansize"] = human_size
 
 def get_db():
-    db_path = os.path.join(BASE_DIR, "..", "db", "clearerr.db")
-    
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(config._DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -44,6 +46,33 @@ def index(request: Request):
     """).fetchall()
     conn.close()
     return templates.TemplateResponse(request=request, name="index.html", context={"media": media})
+
+@app.get("/stats")
+def stats(request: Request):
+    conn = get_db()
+    sizes = conn.execute("""
+        SELECT media_type, SUM(size) AS total_size, COUNT(*) AS count
+        FROM media GROUP BY media_type
+    """).fetchall()
+    removals = conn.execute("""
+        SELECT * FROM removal_history ORDER BY removed_at DESC LIMIT 100
+    """).fetchall()
+    conn.close()
+
+    disk_total, disk_used, disk_free = OS_Storage().get_disk_usage()
+
+    stat_tiles = [
+        {"title": f"{row['media_type'].capitalize()}s", "value": human_size(row['total_size']), "desc": f"{row['count']} items"}
+        for row in sizes
+    ] + [
+        {"title": "Disk Used", "value": human_size(disk_used), "desc": f"of {human_size(disk_total)} total"},
+        {"title": "Disk Free", "value": human_size(disk_free), "desc": None},
+    ]
+
+    return templates.TemplateResponse(request=request, name="stats.html", context={
+        "stat_tiles": stat_tiles,
+        "removals": removals,
+    })
 
 @app.get("/search")
 def search(request: Request, q: str = "", sort: str = "title"):

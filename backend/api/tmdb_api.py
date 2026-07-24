@@ -15,7 +15,7 @@ class Tmdb_API:
             "Accept": "application/json"
         }
 
-    def _get_resp(self, endpoint, params=None) -> json:
+    def _get_resp(self, endpoint, params=None) -> dict | None:
         url = f"{BASE_URL}{endpoint}"
         try:
             resp = requests.get(url, headers=self.headers, params=params, timeout=15)

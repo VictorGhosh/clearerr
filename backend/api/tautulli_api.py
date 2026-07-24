@@ -6,10 +6,12 @@ log = logging.getLogger(__name__)
 
 class Tautulli_API:
     def __init__(self, base_url=config.TAUTULLI_URL, api_key=config.TAUTULLI_KEY):
+        if not base_url:
+            raise ValueError("TAUTULLI_URL is not set")
         self.base_url = base_url + "/api/v2"
         self.api_key = api_key
 
-    def _get_resp(self, params=None) -> json:
+    def _get_resp(self, params=None) -> dict | list | None:
         '''
         Get response json data for tautulli api query with given params. This function
         is intended to handle all network and jsons parsing errors up to the full payload
@@ -38,23 +40,24 @@ class Tautulli_API:
             log.error(f"Error making Tautulli API request: {e}")
             return None
         
-        # json parsing and structure related errors
+        # json parsing errors
         try:
             data = resp.json()
-            
-            # NOTE: seems like all the queries have this structure but pay attention
-            return data['response']['data']        
-        
         except json.JSONDecodeError as e:
             log.error(f"Invalid JSON returned: {e}")
             log.error(f"Raw response: {resp.text[:500]}...")
             return None
+
+        # structure related errors
+        try:
+            # NOTE: seems like all the queries have this structure but pay attention
+            return data['response']['data']
         except KeyError as e:
             log.error(f"Tautulli response structure error (missing key: {e}).")
             log.error(f"Raw data: {data}")
             return None
 
-    def get_api_query(self, query, params={}) -> json:
+    def get_api_query(self, query, params={}) -> dict | list | None:
         query = query.strip().lower()
 
         match query:
@@ -66,7 +69,8 @@ class Tautulli_API:
             case 'get_library_media_info':
                 # remember -1 is broken so length needs to be high
                 params.update({'cmd': 'get_library_media_info', 'length': 99999})
-                return self._get_resp(params=params)['data']
+                resp = self._get_resp(params=params)
+                return resp['data'] if isinstance(resp, dict) else None
 
             # NOTE: data only for watched items else returns {}
             # Full metadata for media. requires params={'rating_key': 'x'} where x is media rating key

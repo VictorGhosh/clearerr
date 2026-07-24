@@ -23,6 +23,7 @@ exemptions_log = logging.getLogger("exemptions")
 log.info("Required pyhton libraries loaded")
 
 class Actions:
+    @staticmethod
     def full_build_lib() -> Library:
 
         # Cant pull this from below because this action is run when db is missing i.e. on its own
@@ -80,6 +81,7 @@ class Actions:
 
         return pl
 
+    @staticmethod
     def process_user_lists(pl: Library, rules: SimpleNamespace) -> bool:
         """Mark user set exemptions and removals in logs and remove if nessesary. Library will be updated
         if anything is removed.
@@ -113,6 +115,9 @@ class Actions:
                     log.info(f"Removing {m.title} due to schedule...")
                     removals_log.info(f"Removing {m.title} from {m.path}")
                     seerr_item = s.find_by_external_id(m.rating_key, m.ids)
+                    if seerr_item is None:
+                        log.error(f"Could not find {m.title} in Seerr, skipping removal")
+                        continue
                     s.delete_media(seerr_item['id'])
                     actual_removals.append(m)
 
@@ -129,16 +134,19 @@ class Actions:
             pl2.build_from_plex()
             log.debug(pl2)
 
-            removed = [m for m in actual_removals if m in pl2.movies + pl2.shows]
-            if removed:
-                log.error(f"Media still present after deletion: {[m.title for m in removed]}")
+            still_present = [m for m in actual_removals if m in pl2.movies + pl2.shows]
+            if still_present:
+                log.error(f"Media still present after deletion: {[m.title for m in still_present]}")
             else:
                 log.info("All targeted media removal validated")
+
+            DB_Handler.log_removals(actual_removals, still_present, "scheduled", config._DB_PATH)
 
             return True
         return False
 
-    def process_storage_needs(rules: SimpleNamespace) -> tuple[int, Library]:
+    @staticmethod
+    def process_storage_needs(rules: SimpleNamespace) -> tuple[float, Storage]:
         s = Storage()
 
         # get library sizes from os
@@ -177,7 +185,8 @@ class Actions:
             log.info(f"Dry run is enabled, nothing will be removed")
         return clear_target, s
 
-    def media_selection(pl: Library, clear_target: int) -> list:
+    @staticmethod
+    def media_selection(pl: Library, clear_target: float) -> list:
         combined_lib = pl.movies + pl.shows
         combined_lib.sort(key=lambda x: x.deletion_score, reverse=False)
 
@@ -202,6 +211,7 @@ class Actions:
 
         return selected
     
+    @staticmethod
     def removal_and_validation(pl: Library, selected: list, rules: SimpleNamespace) -> None:
         if rules.goal.dry_run:
             log.info(f"Dry run is enabled, stopping here") 
@@ -211,6 +221,9 @@ class Actions:
         for media in selected:
             log.info(f"Removing {media.title}...")
             seerr_item = s.find_by_external_id(media.rating_key, media.ids)
+            if seerr_item is None:
+                log.error(f"Could not find {media.title} in Seerr, skipping removal")
+                continue
             s.delete_media(seerr_item['id'])
 
         # Validation
@@ -226,13 +239,15 @@ class Actions:
         pl2.build_from_plex()
         log.debug(pl2)
 
-        # confusing but removed is things that were not removed. sorry idk why I did thta
-        removed = [m for m in selected if m in pl2.movies + pl2.shows]
-        if removed:
-            log.error(f"Media still present after deletion: {[m.title for m in removed]}")
+        still_present = [m for m in selected if m in pl2.movies + pl2.shows]
+        if still_present:
+            log.error(f"Media still present after deletion: {[m.title for m in still_present]}")
         else:
             log.info("All targeted media removal validated")
 
+        DB_Handler.log_removals(selected, still_present, "storage_cleanup", config._DB_PATH)
+
+    @staticmethod
     def process_storage_results(s: Storage) -> None:
         s2 = Storage()
 

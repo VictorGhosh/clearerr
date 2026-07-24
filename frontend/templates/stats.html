@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clearerr - Stats</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-base-200">
+    <div class="flex items-center gap-4 mb-6">
+        <h1 class="text-3xl font-bold">Library Stats</h1>
+        <a href="/" class="link ml-auto">Back to Library</a>
+    </div>
+
+    <div class="stats shadow mb-6 w-full">
+        {% for tile in stat_tiles %}
+        <div class="stat">
+            <div class="stat-title">{{ tile.title }}</div>
+            <div class="stat-value text-lg">{{ tile.value }}</div>
+            {% if tile.desc %}<div class="stat-desc">{{ tile.desc }}</div>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="text-xl font-bold mb-4">Recent Removals</h2>
+    <div class="overflow-x-auto bg-base-100 rounded-box shadow">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Trigger</th>
+                    <th>Removed At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in removals %}
+                <tr>
+                    <td>{{ item.title }}</td>
+                    <td>{{ item.media_type | capitalize }}</td>
+                    <td>{{ item.size | humansize }}</td>
+                    <td>{{ item.trigger }}</td>
+                    <td>{{ item.removed_at | datetimeformat }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-base-content/50">No removals yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

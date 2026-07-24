@@ -11,7 +11,7 @@ class Plex_API():
         self.base_url = base_url
         self.api_key = api_key
 
-    def _get_resp(self, endpoint=None, params={}) -> json:
+    def _get_resp(self, endpoint=None, params={}) -> dict | None:
         # plex default is xml not json
         headers = {
             "X-Plex-Token": self.api_key,
@@ -36,7 +36,7 @@ class Plex_API():
             log.error("Invalid JSON returned from Plex.")
             return None
 
-    def get_api_query(self, query, params={}) -> json:
+    def get_api_query(self, query, params={}) -> dict | list | None:
         '''
         get a response to api query. valid queries:
         get_libraries - no params, most data is under {'Directory': []}
@@ -60,7 +60,8 @@ class Plex_API():
                     'includeAdvanced': 1
                 }
                 endpoint = f"/library/sections/{params['section_id']}/all"
-                return self._get_resp(endpoint, params=payload).get('Metadata', [])
+                resp = self._get_resp(endpoint, params=payload)
+                return resp.get('Metadata', []) if resp else []
 
             # XXX: I've been moving twards minimizing use of this in favor of adding data to payload of others
             # Full metadata for media. requires params={'rating_key': 'x'}
@@ -74,7 +75,8 @@ class Plex_API():
                     'includeAdvanced': 1
                 }
                 endpoint = f"/library/metadata/{params['rating_key']}/children"
-                return self._get_resp(endpoint, params=payload).get('Metadata', [])
+                resp = self._get_resp(endpoint, params=payload)
+                return resp.get('Metadata', []) if resp else []
             
             # All episodes of a show, requires params={'rating_key': x} the seires rating key
             case 'get_leaves':
@@ -83,7 +85,8 @@ class Plex_API():
                     'includeExternalMedia': 1
                 }
                 endpoint = f"/library/metadata/{params['rating_key']}/allLeaves"
-                return self._get_resp(endpoint, params=payload).get('Metadata', [])
+                resp = self._get_resp(endpoint, params=payload)
+                return resp.get('Metadata', []) if resp else []
 
             case catchall:
                 log.exception(f"Unknown api query: {catchall}")
@@ -117,7 +120,11 @@ class Plex_API():
         '''
 
         # FIXME: The main source of un-needed api calls
-        metadata = self.get_api_query('get_metadata', {'rating_key': rating_key})['Metadata'][0]
+        resp = self.get_api_query('get_metadata', {'rating_key': rating_key})
+        if not isinstance(resp, dict):
+            log.exception(f"Failed to get metadata for rating_key {rating_key}")
+            raise ValueError(f"Failed to get metadata for rating_key {rating_key}")
+        metadata = resp['Metadata'][0]
         media_type = metadata['type']
         
         if media_type == 'movie':
@@ -126,12 +133,12 @@ class Plex_API():
         paths = []
 
         if media_type == 'show':
-            for ep in self.get_api_query('get_leaves', {'rating_key': metadata['ratingKey']}):
+            for ep in self.get_api_query('get_leaves', {'rating_key': metadata['ratingKey']}) or []:
                 # back out twice for getting show path
                 paths.append(os.path.dirname(os.path.dirname(ep.get("Media")[0].get("Part")[0].get("file"))))
         
         if media_type == 'season':
-            for ep in self.get_api_query('get_children', {'rating_key': metadata['ratingKey']}):
+            for ep in self.get_api_query('get_children', {'rating_key': metadata['ratingKey']}) or []:
                 paths.append(os.path.dirname(ep.get("Media")[0].get("Part")[0].get("file")))
 
         # validate paths are all the same
