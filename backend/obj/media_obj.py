@@ -72,16 +72,22 @@ class _Media():
 
 
 class Movie(_Media):
+    media_type = 'movie'
+
     def __init__(self, title: str):
         super().__init__(title)
 
 
 class Season(_Media):
+    media_type = 'season'
+
     def __init__(self, title: str):
         super().__init__(title)
 
 
 class Show(_Media):
+    media_type = 'show'
+
     def __init__(self, title: str):
         super().__init__(title)
         self.seasons = []

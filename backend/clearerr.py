@@ -134,11 +134,13 @@ class Actions:
             pl2.build_from_plex()
             log.debug(pl2)
 
-            removed = [m for m in actual_removals if m in pl2.movies + pl2.shows]
-            if removed:
-                log.error(f"Media still present after deletion: {[m.title for m in removed]}")
+            still_present = [m for m in actual_removals if m in pl2.movies + pl2.shows]
+            if still_present:
+                log.error(f"Media still present after deletion: {[m.title for m in still_present]}")
             else:
                 log.info("All targeted media removal validated")
+
+            DB_Handler.log_removals(actual_removals, still_present, "scheduled", config._DB_PATH)
 
             return True
         return False
@@ -237,12 +239,13 @@ class Actions:
         pl2.build_from_plex()
         log.debug(pl2)
 
-        # confusing but removed is things that were not removed. sorry idk why I did thta
-        removed = [m for m in selected if m in pl2.movies + pl2.shows]
-        if removed:
-            log.error(f"Media still present after deletion: {[m.title for m in removed]}")
+        still_present = [m for m in selected if m in pl2.movies + pl2.shows]
+        if still_present:
+            log.error(f"Media still present after deletion: {[m.title for m in still_present]}")
         else:
             log.info("All targeted media removal validated")
+
+        DB_Handler.log_removals(selected, still_present, "storage_cleanup", config._DB_PATH)
 
     @staticmethod
     def process_storage_results(s: Storage) -> None:

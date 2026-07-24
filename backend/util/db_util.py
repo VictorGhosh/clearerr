@@ -1,5 +1,7 @@
 from backend.obj.library_obj import Library
+from backend.obj.media_obj import Show
 import sqlite3
+import time
 
 import logging
 log = logging.getLogger(__name__)
@@ -20,7 +22,8 @@ class DB_Handler:
                 title TEXT,
                 media_type TEXT,
                 deletion_score REAL,
-                poster_url TEXT
+                poster_url TEXT,
+                size INTEGER
             )
         """)
 
@@ -52,24 +55,32 @@ class DB_Handler:
                 queued_at INTEGER
             )
         """)
-        
+
+        # history of completed removals. clearerr owns this, appended to over time
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS removal_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                rating_key TEXT,
+                title TEXT,
+                media_type TEXT,
+                size INTEGER,
+                trigger TEXT,
+                removed_at INTEGER
+            )
+        """)
+
         # write all media
-        for movie in l.movies:
+        for item in l.movies + l.shows:
             cursor.execute("""
-                INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
-            """, (movie.rating_key, movie.ids.get('tmdb'), movie.title, 'movie', movie.deletion_score,
-                    movie.poster_url))
+                INSERT INTO media VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (item.rating_key, item.ids.get('tmdb'), item.title, item.media_type, item.deletion_score,
+                    item.poster_url, item.size))
 
-        for show in l.shows:
-            cursor.execute("""
-                INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)
-            """, (show.rating_key, show.ids.get('tmdb'), show.title, 'show', show.deletion_score,
-                    show.poster_url))
-
-            for season in show.seasons:
-                cursor.execute("""
-                    INSERT INTO seasons VALUES (?, ?, ?, ?)
-                """, (season.rating_key, show.rating_key, season.ids.get('tmdb'), season.title))
+            if isinstance(item, Show):
+                for season in item.seasons:
+                    cursor.execute("""
+                        INSERT INTO seasons VALUES (?, ?, ?, ?)
+                    """, (season.rating_key, item.rating_key, season.ids.get('tmdb'), season.title))
 
         # clean up exempt and removal entries for media no longer in library
         cursor.execute("""
@@ -84,3 +95,22 @@ class DB_Handler:
         conn.commit()
         conn.close()
         log.info(f"Library written to SQLite: {len(l.movies)} movies, {len(l.shows)} shows")
+
+    @staticmethod
+    def log_removals(attempted: list, still_present: list, trigger: str, db_path: str) -> None:
+        actually_removed = [m for m in attempted if m not in still_present]
+        if not actually_removed:
+            return
+
+        removed_at = int(time.time())
+        rows = [(m.rating_key, m.title, m.media_type, m.size, trigger, removed_at) for m in actually_removed]
+
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.executemany("""
+            INSERT INTO removal_history (rating_key, title, media_type, size, trigger, removed_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, rows)
+        conn.commit()
+        conn.close()
+        log.info(f"Logged {len(actually_removed)} removals to history (trigger={trigger})")

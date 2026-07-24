@@ -1,6 +1,5 @@
 from backend.api.os_storage import *
 from settings.config import config
-import shutil
 
 class Storage():
     def __init__(self):
@@ -22,5 +21,5 @@ class Storage():
         self.shows_size = shows_size
         self.lib_size = movies_size + shows_size
 
-        # share/array stats from shutil. these will be more accurate to os including file system
-        self.share_total, self.share_used, self.share_free = shutil.disk_usage(config._PATH_TO_MEDIA)
+        # share/array stats. these will be more accurate to os including file system
+        self.share_total, self.share_used, self.share_free = self.o.get_disk_usage()

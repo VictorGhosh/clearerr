@@ -1,4 +1,5 @@
 import os
+import shutil
 import logging
 from pathlib import Path
 from settings.config import config
@@ -9,6 +10,10 @@ class OS_Storage():
 
     def __init__(self, root: str=config._PATH_TO_MEDIA):
         self.root = root
+
+    def get_disk_usage(self):
+        '''share/array stats from shutil. these are more accurate to the filesystem than a directory walk'''
+        return shutil.disk_usage(self.root)
 
     def get_true_path(self, path):
         '''Given the path provided by the plex api, get the path in the clearerr container.
